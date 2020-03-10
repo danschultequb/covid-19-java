@@ -219,7 +219,7 @@ public class Covid19DataDocument
             final int latestConfirmedCasesColumnIndex = Covid19DataDocument.requiredHeaders.getCount() + dateIndex;
             final Iterable<Integer> confirmedCases = this.csvDocument.getRows().skipFirst()
                 .where(rowCondition)
-                .map((CSVRow row) -> Integers.parse(row.getCell(latestConfirmedCasesColumnIndex).trim()).await());
+                .map((CSVRow row) -> Integers.parse(row.getCell(latestConfirmedCasesColumnIndex)).await());
             result = Integers.sum(confirmedCases);
         }
 
@@ -242,7 +242,7 @@ public class Covid19DataDocument
             final String[] dateParts = dateString.split("/");
             final int month = Integers.parse(dateParts[0]).await();
             final int day = Integers.parse(dateParts[1]).await();
-            final int year = Integers.parse(dateParts[2].trim()).await() + 2000;
+            final int year = Integers.parse(dateParts[2]).await() + 2000;
             return DateTime.create(year, month, day);
         });
     }
