@@ -70,6 +70,11 @@ public interface QubCovid19
             output.writeLine().await();
 
             final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
+            final Map<String,Function1<CSVRow,Boolean>> locations = Map.<String,Function1<CSVRow,Boolean>>create()
+                .set("Global", (CSVRow row) -> true)
+                .set("China", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "Mainland China"))
+                .set("USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "US"))
+                .set("UK", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "UK"));
 
             output.writeLine("Confirmed Cases:").await();
             final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
@@ -93,10 +98,10 @@ public interface QubCovid19
                 }
                 confirmedCasesTable.addRow(confirmedCasesRow);
             };
-            addConfirmedCasesRow.run("Global", (CSVRow row) -> true);
-            addConfirmedCasesRow.run("China", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "Mainland China"));
-            addConfirmedCasesRow.run("USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "US"));
-            addConfirmedCasesRow.run("UK", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "UK"));
+            for (final MapEntry<String,Function1<CSVRow,Boolean>> location : locations)
+            {
+                addConfirmedCasesRow.run(location.getKey(), location.getValue());
+            }
             confirmedCasesTable.toString(output, confirmedCasesFormat).await();
             output.writeLine().await();
             output.writeLine().await();
@@ -119,10 +124,10 @@ public interface QubCovid19
                 }
                 confirmedCasesChangeTable.addRow(confirmedCasesChangeRow);
             };
-            addConfirmedCasesChangeRow.run("Global", (CSVRow row) -> true);
-            addConfirmedCasesChangeRow.run("China", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "Mainland China"));
-            addConfirmedCasesChangeRow.run("USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "US"));
-            addConfirmedCasesChangeRow.run("UK", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "UK"));
+            for (final MapEntry<String,Function1<CSVRow,Boolean>> location : locations)
+            {
+                addConfirmedCasesChangeRow.run(location.getKey(), location.getValue());
+            }
             confirmedCasesChangeTable.toString(output, confirmedCasesFormat).await();
             output.writeLine();
             output.writeLine();
@@ -144,10 +149,10 @@ public interface QubCovid19
                 }
                 confirmedCasesAverageChangePerDayTable.addRow(confirmedCasesAverageChangePerDayRow);
             };
-            addConfirmedCasesAverageChangePerDayRow.run("Global", (CSVRow row) -> true);
-            addConfirmedCasesAverageChangePerDayRow.run("China", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "Mainland China"));
-            addConfirmedCasesAverageChangePerDayRow.run("USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "US"));
-            addConfirmedCasesAverageChangePerDayRow.run("UK", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "UK"));
+            for (final MapEntry<String,Function1<CSVRow,Boolean>> location : locations)
+            {
+                addConfirmedCasesAverageChangePerDayRow.run(location.getKey(), location.getValue());
+            }
             confirmedCasesAverageChangePerDayTable.toString(output, confirmedCasesFormat).await();
             output.writeLine();
         }
