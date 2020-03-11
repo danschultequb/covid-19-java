@@ -1,7 +1,7 @@
 {
   "publisher": "qub",
   "project": "covid-19-java",
-  "version": "3",
+  "version": "4",
   "java": {
     "mainClass": "qub.QubCovid19",
     "shortcutName": "qub-covid-19",

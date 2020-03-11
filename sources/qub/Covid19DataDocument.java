@@ -112,6 +112,20 @@ public class Covid19DataDocument
     }
 
     /**
+     * Get the dates that have been reported as of the provided date.
+     * @param asOf The maximum date to report.
+     * @return The dates that have been reported as of the provided Date.
+     */
+    public Indexable<DateTime> getDatesReported(DateTime asOf)
+    {
+        PreCondition.assertNotNull(asOf, "asOf");
+
+        return this.getDatesReported()
+            .where((DateTime date) -> date.lessThanOrEqualTo(asOf))
+            .toList();
+    }
+
+    /**
      * Get the first date reported.
      * @return The first date reported.
      */
@@ -130,6 +144,17 @@ public class Covid19DataDocument
     }
 
     /**
+     * Get the last date reported.
+     * @return The last date reported.
+     */
+    public DateTime getLastDateReported(DateTime asOf)
+    {
+        PreCondition.assertNotNull(asOf, "asOf");
+
+        return this.getDatesReported(asOf).last();
+    }
+
+    /**
      * Get the countries that have been reported.
      * @return The countries that have been reported.
      */
@@ -138,6 +163,37 @@ public class Covid19DataDocument
         return Set.create(this.csvDocument.getRows().skipFirst()
             .map((CSVRow row) -> row.getCell(1))
             .where(Functions.not(Strings::isNullOrEmpty)));
+    }
+
+    /**
+     * Get the countries that have been reported.
+     * @return The countries that have been reported.
+     */
+    public Set<String> getCountriesReported(DateTime asOf)
+    {
+        PreCondition.assertNotNull(asOf, "asOf");
+
+        final int confirmedCasesColumnIndex = this.getConfirmedCasesIndex(asOf);
+        final Set<String> result = Set.create();
+        if (confirmedCasesColumnIndex != -1)
+        {
+            result.addAll(this.csvDocument.getRows().skipFirst()
+                .where((CSVRow row) ->
+                {
+                    boolean includeRow = false;
+                    if (!Strings.isNullOrEmpty(row.getCell(1)))
+                    {
+                        final Integer confirmedCases = Integers.parse(row.getCell(confirmedCasesColumnIndex)).catchError().await();
+                        includeRow = confirmedCases != null && confirmedCases > 0;
+                    }
+                    return includeRow;
+                })
+                .map((CSVRow row) -> row.getCell(1)));
+        }
+
+        PostCondition.assertNotNull(result, "result");
+
+        return result;
     }
 
     /**
@@ -185,15 +241,8 @@ public class Covid19DataDocument
         return this.getConfirmedCasesInner(date, rowCondition);
     }
 
-    /**
-     * Get the total number of confirmed cases as of the provided date.
-     * @param date The date to get the total number of confirmed cases by or null to get the latest.
-     * @return The total number of confirmed cases as of the provided date.
-     */
-    public int getConfirmedCasesInner(DateTime date, Function1<CSVRow,Boolean> rowCondition)
+    private int getDateIndex(DateTime date)
     {
-        PreCondition.assertNotNull(rowCondition, "rowCondition");
-
         final Indexable<DateTime> datesReported = this.getDatesReported();
         int dateIndex = -1;
         if (date != null)
@@ -213,13 +262,50 @@ public class Covid19DataDocument
             }
         }
 
+        PostCondition.assertGreaterThanOrEqualTo(dateIndex, -1, "dateIndex");
+
+        return dateIndex;
+    }
+
+    private int getConfirmedCasesIndex(DateTime date)
+    {
+        final int dateIndex = this.getDateIndex(date);
+        final int result = this.getConfirmedCasesIndex(dateIndex);
+
+        PostCondition.assertGreaterThanOrEqualTo(result, -1, "result");
+
+        return result;
+    }
+
+    private int getConfirmedCasesIndex(int dateIndex)
+    {
+        PreCondition.assertGreaterThanOrEqualTo(dateIndex, -1, "dateIndex");
+
+        final int result = dateIndex == -1
+            ? -1
+            : dateIndex + Covid19DataDocument.requiredHeaders.getCount();
+
+        PostCondition.assertGreaterThanOrEqualTo(result, -1, "result");
+
+        return result;
+    }
+
+    /**
+     * Get the total number of confirmed cases as of the provided date.
+     * @param date The date to get the total number of confirmed cases by or null to get the latest.
+     * @return The total number of confirmed cases as of the provided date.
+     */
+    public int getConfirmedCasesInner(DateTime date, Function1<CSVRow,Boolean> rowCondition)
+    {
+        PreCondition.assertNotNull(rowCondition, "rowCondition");
+
         int result = 0;
-        if (dateIndex != -1)
+        final int confirmedCasesColumnIndex = this.getConfirmedCasesIndex(date);
+        if (confirmedCasesColumnIndex != -1)
         {
-            final int latestConfirmedCasesColumnIndex = Covid19DataDocument.requiredHeaders.getCount() + dateIndex;
             final Iterable<Integer> confirmedCases = this.csvDocument.getRows().skipFirst()
                 .where(rowCondition)
-                .map((CSVRow row) -> Integers.parse(row.getCell(latestConfirmedCasesColumnIndex)).await());
+                .map((CSVRow row) -> Integers.parse(row.getCell(confirmedCasesColumnIndex)).await());
             result = Integers.sum(confirmedCases);
         }
 

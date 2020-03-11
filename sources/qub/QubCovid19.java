@@ -59,15 +59,17 @@ public interface QubCovid19
 
             output.writeLine("Summary:").await();
             final CharacterTable summary = CharacterTable.create();
-            final Iterable<DateTime> datesReported = data.getDatesReported();
-            summary.addRow("Dates reported:", Integers.toString(data.getDatesReported().getCount()));
-            final Iterable<String> countriesReported = data.getCountriesReported();
+            final Iterable<DateTime> datesReported = data.getDatesReported(now);
+            summary.addRow("Dates reported:", Integers.toString(datesReported.getCount()));
+            final Iterable<String> countriesReported = data.getCountriesReported(now);
             summary.addRow("Countries reported:", Integers.toString(countriesReported.getCount()));
             final DateTime mostRecentDateReported = datesReported.last();
             summary.addRow("Most recent report:", QubCovid19.toString(mostRecentDateReported));
             summary.toString(output, CharacterTableFormat.consise).await();
             output.writeLine().await();
             output.writeLine().await();
+
+            final DateTime reportStartDate = Comparer.minimum(Iterable.create(now, mostRecentDateReported));
 
             final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
             final Map<String,Function1<CSVRow,Boolean>> locations = Map.<String,Function1<CSVRow,Boolean>>create()
@@ -80,20 +82,22 @@ public interface QubCovid19
             final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
                 .setNewLine('\n')
                 .setTopBorder('-')
+                .setLeftBorder("| ")
                 .setColumnSeparator(" | ")
+                .setRightBorder(" |")
                 .setBottomBorder('-');
             final CharacterTable confirmedCasesTable = CharacterTable.create();
-            final List<String> confirmedCasesHeaderRow = List.create("Location", QubCovid19.toString(now));
+            final List<String> confirmedCasesHeaderRow = List.create("Location", QubCovid19.toString(reportStartDate));
             confirmedCasesHeaderRow.addAll(previousDays.map((Integer daysAgo) -> daysAgo + " days ago"));
             confirmedCasesTable.addRow(confirmedCasesHeaderRow);
             final Action2<String,Function1<CSVRow,Boolean>> addConfirmedCasesRow = (String location, Function1<CSVRow,Boolean> rowCondition) ->
             {
                 final List<String> confirmedCasesRow = List.create(location);
-                final int totalConfirmedCases = data.getConfirmedCases(rowCondition);
+                final int totalConfirmedCases = data.getConfirmedCases(reportStartDate, rowCondition);
                 confirmedCasesRow.add(Integers.toString(totalConfirmedCases));
                 for (final int daysAgo : previousDays)
                 {
-                    final DateTime previousDate = now.minus(Duration.days(daysAgo));
+                    final DateTime previousDate = reportStartDate.minus(Duration.days(daysAgo));
                     confirmedCasesRow.add(Integers.toString(data.getConfirmedCases(previousDate, rowCondition)));
                 }
                 confirmedCasesTable.addRow(confirmedCasesRow);
@@ -117,7 +121,7 @@ public interface QubCovid19
                 final int totalConfirmedCases = data.getConfirmedCases(rowCondition);
                 for (final int daysAgo : previousDays)
                 {
-                    final DateTime previousDate = now.minus(Duration.days(daysAgo));
+                    final DateTime previousDate = reportStartDate.minus(Duration.days(daysAgo));
                     final int previousDateConfirmedCases = data.getConfirmedCases(previousDate, rowCondition);
                     final int confirmedCasesChange = totalConfirmedCases - previousDateConfirmedCases;
                     confirmedCasesChangeRow.add(Integers.toString(confirmedCasesChange));
@@ -141,7 +145,7 @@ public interface QubCovid19
                 final int totalConfirmedCases = data.getConfirmedCases(rowCondition);
                 for (final int daysAgo : previousDays)
                 {
-                    final DateTime previousDate = now.minus(Duration.days(daysAgo));
+                    final DateTime previousDate = reportStartDate.minus(Duration.days(daysAgo));
                     final int previousDateConfirmedCases = data.getConfirmedCases(previousDate, rowCondition);
                     final int confirmedCasesChange = totalConfirmedCases - previousDateConfirmedCases;
                     final int confirmedCasesAverageChangePerDay = confirmedCasesChange / daysAgo;
