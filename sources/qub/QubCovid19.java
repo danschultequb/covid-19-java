@@ -74,9 +74,9 @@ public interface QubCovid19
             final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
             final Map<String,Function1<CSVRow,Boolean>> locations = Map.<String,Function1<CSVRow,Boolean>>create()
                 .set("Global", (CSVRow row) -> true)
-                .set("China", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "Mainland China"))
+                .set("China", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "China"))
                 .set("USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("UK", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "UK"));
+                .set("UK", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "United Kingdom"));
 
             output.writeLine("Confirmed Cases:").await();
             final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
@@ -118,7 +118,7 @@ public interface QubCovid19
             final Action2<String,Function1<CSVRow,Boolean>> addConfirmedCasesChangeRow = (String location, Function1<CSVRow,Boolean> rowCondition) ->
             {
                 final List<String> confirmedCasesChangeRow = List.create(location);
-                final int totalConfirmedCases = data.getConfirmedCases(rowCondition);
+                final int totalConfirmedCases = data.getConfirmedCases(reportStartDate, rowCondition);
                 for (final int daysAgo : previousDays)
                 {
                     final DateTime previousDate = reportStartDate.minus(Duration.days(daysAgo));
@@ -142,7 +142,7 @@ public interface QubCovid19
             final Action2<String,Function1<CSVRow,Boolean>> addConfirmedCasesAverageChangePerDayRow = (String location, Function1<CSVRow,Boolean> rowCondition) ->
             {
                 final List<String> confirmedCasesAverageChangePerDayRow = List.create(location);
-                final int totalConfirmedCases = data.getConfirmedCases(rowCondition);
+                final int totalConfirmedCases = data.getConfirmedCases(reportStartDate, rowCondition);
                 for (final int daysAgo : previousDays)
                 {
                     final DateTime previousDate = reportStartDate.minus(Duration.days(daysAgo));
