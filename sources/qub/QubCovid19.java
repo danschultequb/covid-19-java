@@ -75,9 +75,17 @@ public interface QubCovid19
             final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
             final Map<String,Function1<CSVRow,Boolean>> locations = Map.<String,Function1<CSVRow,Boolean>>create()
                 .set("Global", (CSVRow row) -> true)
-                .set("China", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "China"))
                 .set("USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("UK", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "United Kingdom"));
+                .set("Washington, USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(0), "Washington") &&
+                                                        Comparer.equalIgnoreCase(row.getCell(1), "US"))
+                .set("Michigan, USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(0), "Michigan") &&
+                                                      Comparer.equalIgnoreCase(row.getCell(1), "US"))
+                .set("New York, USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(0), "New York") &&
+                                                      Comparer.equalIgnoreCase(row.getCell(1), "US"))
+                .set("Florida, USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(0), "Florida") &&
+                                                     Comparer.equalIgnoreCase(row.getCell(1), "US"))
+                .set("Utah, USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(0), "Utah") &&
+                                                  Comparer.equalIgnoreCase(row.getCell(1), "US"));
 
             final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
                 .setNewLine('\n')
