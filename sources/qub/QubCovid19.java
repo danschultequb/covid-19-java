@@ -57,15 +57,16 @@ public interface QubCovid19
             output.writeLine(" Done.").await();
             output.writeLine().await();
 
-            output.writeLine("Summary:").await();
-            final CharacterTable summary = CharacterTable.create();
             final Iterable<DateTime> datesReported = data.getDatesReported(now);
-            summary.addRow("Dates reported:", Integers.toString(datesReported.getCount()));
             final Iterable<String> countriesReported = data.getCountriesReported(now);
-            summary.addRow("Countries reported:", Integers.toString(countriesReported.getCount()));
             final DateTime mostRecentDateReported = datesReported.last();
-            summary.addRow("Most recent report:", QubCovid19.toString(mostRecentDateReported));
-            summary.toString(output, CharacterTableFormat.consise).await();
+
+            output.writeLine("Summary:").await();
+            CharacterTable.create()
+                .addRow("Dates reported:", Integers.toString(datesReported.getCount()))
+                .addRow("Countries reported:", Integers.toString(countriesReported.getCount()))
+                .addRow("Most recent report:", QubCovid19.toString(mostRecentDateReported))
+                .toString(output, CharacterTableFormat.consise).await();
             output.writeLine().await();
             output.writeLine().await();
 
@@ -78,7 +79,6 @@ public interface QubCovid19
                 .set("USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "US"))
                 .set("UK", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "United Kingdom"));
 
-            output.writeLine("Confirmed Cases:").await();
             final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
                 .setNewLine('\n')
                 .setTopBorder('-')
@@ -86,10 +86,9 @@ public interface QubCovid19
                 .setColumnSeparator(" | ")
                 .setRightBorder(" |")
                 .setBottomBorder('-');
-            final CharacterTable confirmedCasesTable = CharacterTable.create();
-            final List<String> confirmedCasesHeaderRow = List.create("Location", QubCovid19.toString(reportStartDate));
-            confirmedCasesHeaderRow.addAll(previousDays.map((Integer daysAgo) -> daysAgo + " days ago"));
-            confirmedCasesTable.addRow(confirmedCasesHeaderRow);
+
+            output.writeLine("Confirmed Cases:").await();
+            final CharacterTable confirmedCasesTable = QubCovid19.createConfirmedCasesTable(reportStartDate, previousDays);
             final Action2<String,Function1<CSVRow,Boolean>> addConfirmedCasesRow = (String location, Function1<CSVRow,Boolean> rowCondition) ->
             {
                 final List<String> confirmedCasesRow = List.create(location);
@@ -111,10 +110,7 @@ public interface QubCovid19
             output.writeLine().await();
 
             output.writeLine("Confirmed Cases Change:").await();
-            final CharacterTable confirmedCasesChangeTable = CharacterTable.create();
-            final List<String> confirmedCasesChangeHeaderRow = List.create("Location");
-            confirmedCasesChangeHeaderRow.addAll(previousDays.map((Integer daysAgo) -> daysAgo + " days ago"));
-            confirmedCasesChangeTable.addRow(confirmedCasesChangeHeaderRow);
+            final CharacterTable confirmedCasesChangeTable = QubCovid19.createConfirmedCasesTable(null, previousDays);
             final Action2<String,Function1<CSVRow,Boolean>> addConfirmedCasesChangeRow = (String location, Function1<CSVRow,Boolean> rowCondition) ->
             {
                 final List<String> confirmedCasesChangeRow = List.create(location);
@@ -137,8 +133,7 @@ public interface QubCovid19
             output.writeLine();
 
             output.writeLine("Confirmed Cases Average Change Per Day:").await();
-            final CharacterTable confirmedCasesAverageChangePerDayTable = CharacterTable.create();
-            confirmedCasesAverageChangePerDayTable.addRow(confirmedCasesChangeHeaderRow);
+            final CharacterTable confirmedCasesAverageChangePerDayTable = QubCovid19.createConfirmedCasesTable(null, previousDays);
             final Action2<String,Function1<CSVRow,Boolean>> addConfirmedCasesAverageChangePerDayRow = (String location, Function1<CSVRow,Boolean> rowCondition) ->
             {
                 final List<String> confirmedCasesAverageChangePerDayRow = List.create(location);
@@ -160,6 +155,22 @@ public interface QubCovid19
             confirmedCasesAverageChangePerDayTable.toString(output, confirmedCasesFormat).await();
             output.writeLine();
         }
+    }
+
+    static CharacterTable createConfirmedCasesTable(DateTime reportStartDate, Iterable<Integer> previousDays)
+    {
+        PreCondition.assertNotNull(previousDays, "previousDays");
+
+        final List<String> row = List.create("Location");
+        if (reportStartDate != null)
+        {
+            row.add(QubCovid19.toString(reportStartDate));
+        }
+        if (!Iterable.isNullOrEmpty(previousDays))
+        {
+            row.addAll(previousDays.map((Integer daysAgo) -> daysAgo + " days ago"));
+        }
+        return CharacterTable.create().addRow(row);
     }
 
     static String toString(DateTime date)

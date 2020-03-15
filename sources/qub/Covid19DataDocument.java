@@ -5,7 +5,7 @@ package qub;
  */
 public class Covid19DataDocument
 {
-    private static final Iterable<String> requiredHeaders = Iterable.create("Province/State", "Country/Region", "Lat", "Long");
+    public static final Iterable<String> requiredHeaders = Iterable.create("Province/State", "Country/Region", "Lat", "Long");
 
     private final CSVDocument csvDocument;
 
@@ -13,7 +13,7 @@ public class Covid19DataDocument
     {
         PreCondition.assertNotNull(csvDocument, "csvDocument");
         PreCondition.assertGreaterThanOrEqualTo(csvDocument.getRowCount(), 1, "csvDocument.getRowCount()");
-        PreCondition.assertEqual(Covid19DataDocument.requiredHeaders, csvDocument.getRow(0).getCells().take(Covid19DataDocument.requiredHeaders.getCount()), "csvDocument.getRow(0).getCells().take(Covid19DataDocument.requiredHeaders.getCount())");
+        PreCondition.assertEqual(Covid19DataDocument.requiredHeaders, Covid19DataDocument.getHeaderRow(csvDocument).getCells().take(Covid19DataDocument.requiredHeaders.getCount()), "Covid19DataDocument.getHeaderRow(csvDocument).getCells().take(Covid19DataDocument.requiredHeaders.getCount())");
 
         this.csvDocument = csvDocument;
     }
@@ -84,12 +84,7 @@ public class Covid19DataDocument
                 throw new ParseException("A COVID-19 data document must contain a header row that starts with " + Covid19DataDocument.requiredHeaders + ".");
             }
 
-            final CSVRow headerRow = csvDocument.getRow(0);
-            if (headerRow == null)
-            {
-                throw new ParseException("The first row of the COVID-19 data document must contain " + Covid19DataDocument.requiredHeaders + ".");
-            }
-
+            final CSVRow headerRow = Covid19DataDocument.getHeaderRow(csvDocument);
             if (!headerRow.getCells().take(Covid19DataDocument.requiredHeaders.getCount()).equals(Covid19DataDocument.requiredHeaders))
             {
                 throw new ParseException("The first row of the COVID-19 data document must start with " + Covid19DataDocument.requiredHeaders + ".");
@@ -100,12 +95,33 @@ public class Covid19DataDocument
     }
 
     /**
+     * Get the header row that contains the dates reported.
+     * @return The header row that contains the dates reported.
+     */
+    private CSVRow getHeaderRow()
+    {
+        return Covid19DataDocument.getHeaderRow(this.csvDocument);
+    }
+
+    private static CSVRow getHeaderRow(CSVDocument csvDocument)
+    {
+        PreCondition.assertNotNull(csvDocument, "csvDocument");
+
+        return csvDocument.getRow(0);
+    }
+
+    private Iterable<CSVRow> getDataRows()
+    {
+        return this.csvDocument.getRows().skipFirst();
+    }
+
+    /**
      * Get the dates that have been reported.
      * @return The dates that have been reported.
      */
     public Indexable<DateTime> getDatesReported()
     {
-        return this.csvDocument.getRow(0).getCells()
+        return this.getHeaderRow().getCells()
             .skip(Covid19DataDocument.requiredHeaders.getCount())
             .map((String dateString) -> Covid19DataDocument.parseDate(dateString).await())
             .toList();
@@ -126,42 +142,13 @@ public class Covid19DataDocument
     }
 
     /**
-     * Get the first date reported.
-     * @return The first date reported.
-     */
-    public DateTime getFirstDateReported()
-    {
-        return this.getDatesReported().first();
-    }
-
-    /**
-     * Get the last date reported.
-     * @return The last date reported.
-     */
-    public DateTime getLastDateReported()
-    {
-        return this.getDatesReported().last();
-    }
-
-    /**
-     * Get the last date reported.
-     * @return The last date reported.
-     */
-    public DateTime getLastDateReported(DateTime asOf)
-    {
-        PreCondition.assertNotNull(asOf, "asOf");
-
-        return this.getDatesReported(asOf).last();
-    }
-
-    /**
      * Get the countries that have been reported.
      * @return The countries that have been reported.
      */
     public Set<String> getCountriesReported()
     {
-        return Set.create(this.csvDocument.getRows().skipFirst()
-            .map((CSVRow row) -> row.getCell(1))
+        return Set.create(this.getDataRows()
+            .map(Covid19DataDocument::getCountry)
             .where(Functions.not(Strings::isNullOrEmpty)));
     }
 
@@ -173,22 +160,16 @@ public class Covid19DataDocument
     {
         PreCondition.assertNotNull(asOf, "asOf");
 
-        final int confirmedCasesColumnIndex = this.getConfirmedCasesIndex(asOf);
+        final int confirmedCasesIndex = this.getConfirmedCasesIndex(asOf);
         final Set<String> result = Set.create();
-        if (confirmedCasesColumnIndex != -1)
+        if (confirmedCasesIndex != -1)
         {
-            result.addAll(this.csvDocument.getRows().skipFirst()
-                .where((CSVRow row) ->
-                {
-                    boolean includeRow = false;
-                    if (!Strings.isNullOrEmpty(row.getCell(1)))
-                    {
-                        final Integer confirmedCases = Integers.parse(row.getCell(confirmedCasesColumnIndex)).catchError().await();
-                        includeRow = confirmedCases != null && confirmedCases > 0;
-                    }
-                    return includeRow;
-                })
-                .map((CSVRow row) -> row.getCell(1)));
+            result.addAll(this.getDataRows()
+                .map((CSVRow row) ->
+                    0 < Covid19DataDocument.getConfirmedCasesFromConfirmedCasesIndex(row, confirmedCasesIndex)
+                        ? Covid19DataDocument.getCountry(row)
+                        : null)
+                .where(Functions.not(Strings::isNullOrEmpty)));
         }
 
         PostCondition.assertNotNull(result, "result");
@@ -202,30 +183,7 @@ public class Covid19DataDocument
      */
     public int getConfirmedCases()
     {
-        return this.getConfirmedCases((CSVRow row) -> true);
-    }
-
-    /**
-     * Get the total number of confirmed cases.
-     * @return The total number of confirmed cases.
-     */
-    public int getConfirmedCases(Function1<CSVRow,Boolean> rowCondition)
-    {
-        PreCondition.assertNotNull(rowCondition, "rowCondition");
-
-        return this.getConfirmedCasesInner(null, rowCondition);
-    }
-
-    /**
-     * Get the total number of confirmed cases as of the provided date.
-     * @param date The date to get the total number of confirmed cases by.
-     * @return The total number of confirmed cases as of the provided date.
-     */
-    public int getConfirmedCases(DateTime date)
-    {
-        PreCondition.assertNotNull(date, "date");
-
-        return this.getConfirmedCases(date, (CSVRow row) -> true);
+        return this.getConfirmedCasesInner(null, (CSVRow row) -> true);
     }
 
     /**
@@ -270,14 +228,14 @@ public class Covid19DataDocument
     private int getConfirmedCasesIndex(DateTime date)
     {
         final int dateIndex = this.getDateIndex(date);
-        final int result = this.getConfirmedCasesIndex(dateIndex);
+        final int result = Covid19DataDocument.getConfirmedCasesIndex(dateIndex);
 
         PostCondition.assertGreaterThanOrEqualTo(result, -1, "result");
 
         return result;
     }
 
-    private int getConfirmedCasesIndex(int dateIndex)
+    private static int getConfirmedCasesIndex(int dateIndex)
     {
         PreCondition.assertGreaterThanOrEqualTo(dateIndex, -1, "dateIndex");
 
@@ -300,13 +258,12 @@ public class Covid19DataDocument
         PreCondition.assertNotNull(rowCondition, "rowCondition");
 
         int result = 0;
-        final int confirmedCasesColumnIndex = this.getConfirmedCasesIndex(date);
-        if (confirmedCasesColumnIndex != -1)
+        final int confirmedCasesIndex = this.getConfirmedCasesIndex(date);
+        if (confirmedCasesIndex != -1)
         {
-            final Iterable<Integer> confirmedCases = this.csvDocument.getRows().skipFirst()
+            result = Integers.sum(this.getDataRows()
                 .where(rowCondition)
-                .map((CSVRow row) -> Integers.parse(row.getCell(confirmedCasesColumnIndex)).await());
-            result = Integers.sum(confirmedCases);
+                .map((CSVRow row) -> Covid19DataDocument.getConfirmedCasesFromConfirmedCasesIndex(row, confirmedCasesIndex)));
         }
 
         PostCondition.assertGreaterThanOrEqualTo(result, 0, "result");
@@ -331,5 +288,35 @@ public class Covid19DataDocument
             final int year = Integers.parse(dateParts[2]).await() + 2000;
             return DateTime.create(year, month, day);
         });
+    }
+
+    private static String getCountry(CSVRow dataRow)
+    {
+        PreCondition.assertNotNull(dataRow, "dataRow");
+
+        return dataRow.getCell(1);
+    }
+
+    private static int getConfirmedCasesFromConfirmedCasesIndex(CSVRow dataRow, int confirmedCasesIndex)
+    {
+        PreCondition.assertNotNull(dataRow, "dataRow");
+        PreCondition.assertGreaterThanOrEqualTo(confirmedCasesIndex, Covid19DataDocument.requiredHeaders.getCount(), "confirmedCasesIndex");
+
+        Integer result = null;
+
+        final String confirmedCasesString = dataRow.getCell(confirmedCasesIndex);
+        if (!Strings.isNullOrEmpty(confirmedCasesString))
+        {
+            result = Integers.parse(confirmedCasesString).catchError().await();
+        }
+
+        if (result == null)
+        {
+            result = 0;
+        }
+
+        PostCondition.assertNotNull(result, "result");
+
+        return result;
     }
 }
