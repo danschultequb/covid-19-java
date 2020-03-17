@@ -75,16 +75,24 @@ public interface QubCovid19
             final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
             final Map<String,Function1<CSVRow,Boolean>> locations = Map.<String,Function1<CSVRow,Boolean>>create()
                 .set("Global", (CSVRow row) -> true)
+                .set("China", (CSVRow row) -> Strings.contains(row.getCell(1), "China"))
+                .set("Italy", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "Italy"))
+                .set("South Korea", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "Korea, South"))
                 .set("USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("Washington, USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(0), "Washington") &&
+                .set("Washington, USA", (CSVRow row) -> (Comparer.equalIgnoreCase(row.getCell(0), "Washington") ||
+                                                         Strings.contains(row.getCell(0), ", WA")) &&
                                                         Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("Michigan, USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(0), "Michigan") &&
+                .set("Michigan, USA", (CSVRow row) -> (Comparer.equalIgnoreCase(row.getCell(0), "Michigan") ||
+                                                       Strings.contains(row.getCell(0), ", MI")) &&
                                                       Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("New York, USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(0), "New York") &&
+                .set("New York, USA", (CSVRow row) -> (Comparer.equalIgnoreCase(row.getCell(0), "New York") ||
+                                                       Strings.contains(row.getCell(0), ", NY")) &&
                                                       Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("Florida, USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(0), "Florida") &&
+                .set("Florida, USA", (CSVRow row) -> (Comparer.equalIgnoreCase(row.getCell(0), "Florida") ||
+                                                      Strings.contains(row.getCell(0), ", FL")) &&
                                                      Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("Utah, USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(0), "Utah") &&
+                .set("Utah, USA", (CSVRow row) -> (Comparer.equalIgnoreCase(row.getCell(0), "Utah") ||
+                                                   Strings.contains(row.getCell(0), ", UT")) &&
                                                   Comparer.equalIgnoreCase(row.getCell(1), "US"));
 
             final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
@@ -116,29 +124,6 @@ public interface QubCovid19
             confirmedCasesTable.toString(output, confirmedCasesFormat).await();
             output.writeLine().await();
             output.writeLine().await();
-
-            output.writeLine("Confirmed Cases Change:").await();
-            final CharacterTable confirmedCasesChangeTable = QubCovid19.createConfirmedCasesTable(null, previousDays);
-            final Action2<String,Function1<CSVRow,Boolean>> addConfirmedCasesChangeRow = (String location, Function1<CSVRow,Boolean> rowCondition) ->
-            {
-                final List<String> confirmedCasesChangeRow = List.create(location);
-                final int totalConfirmedCases = data.getConfirmedCases(reportStartDate, rowCondition);
-                for (final int daysAgo : previousDays)
-                {
-                    final DateTime previousDate = reportStartDate.minus(Duration.days(daysAgo));
-                    final int previousDateConfirmedCases = data.getConfirmedCases(previousDate, rowCondition);
-                    final int confirmedCasesChange = totalConfirmedCases - previousDateConfirmedCases;
-                    confirmedCasesChangeRow.add(Integers.toString(confirmedCasesChange));
-                }
-                confirmedCasesChangeTable.addRow(confirmedCasesChangeRow);
-            };
-            for (final MapEntry<String,Function1<CSVRow,Boolean>> location : locations)
-            {
-                addConfirmedCasesChangeRow.run(location.getKey(), location.getValue());
-            }
-            confirmedCasesChangeTable.toString(output, confirmedCasesFormat).await();
-            output.writeLine();
-            output.writeLine();
 
             output.writeLine("Confirmed Cases Average Change Per Day:").await();
             final CharacterTable confirmedCasesAverageChangePerDayTable = QubCovid19.createConfirmedCasesTable(null, previousDays);
