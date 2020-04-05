@@ -29,9 +29,11 @@ public interface QubCovid19
             profilerParameter.await();
 
             final CharacterWriteStream output = process.getOutputCharacterWriteStream();
-            final HttpClient httpClient = HttpClient.create(process.getNetwork());
-            final DateTime now = process.getClock().getCurrentDateTime();
-            result = new QubCovid19Parameters(output, httpClient, now);
+
+            final Folder projectDataFolder = process.getQubProjectDataFolder().await();
+            final Git git = Git.create(process);
+            final Covid19DataSource dataSource = Covid19GitDataSource.create(projectDataFolder, git);
+            result = new QubCovid19Parameters(output, dataSource);
         }
 
         return result;
@@ -42,128 +44,190 @@ public interface QubCovid19
         PreCondition.assertNotNull(parameters, "parameters");
 
         final IndentedCharacterWriteStream output = new IndentedCharacterWriteStream(parameters.getOutput());
-        final HttpClient httpClient = parameters.getHttpClient();
-        final DateTime now = parameters.getNow();
+        final Covid19DataSource dataSource = parameters.getDataSource();
 
-        final String confirmedUrlString = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv";
+        output.write("Refreshing data...").await();
+        dataSource.refreshData().await();
+        output.writeLine(" Done.").await();
+        output.writeLine().await();
 
-        output.write("Getting confirmed cases data...").await();
-        try (final HttpResponse confirmedResponse = httpClient.get(confirmedUrlString).await())
-        {
-            output.writeLine(" Done.").await();
+        final Covid19Summary summary = dataSource.getDataSummary().await();
+        final DateTime mostRecentDateReported = summary.getMostRecentDateReported();
+        output.writeLine("Summary:").await();
+        CharacterTable.create()
+            .addRow("Dates reported:", Integers.toString(summary.getDatesReportedCount()))
+            .addRow("Countries reported:", Integers.toString(summary.getCountriesReportedCount()))
+            .addRow("Most recent report:", QubCovid19.toString(mostRecentDateReported))
+            .toString(output, CharacterTableFormat.consise).await();
+        output.writeLine().await();
+        output.writeLine().await();
 
-            output.write("Parsing confirmed cases data...");
-            final Covid19DataDocument data = Covid19DataDocument.parse(confirmedResponse.getBody()).await();
-            output.writeLine(" Done.").await();
-            output.writeLine().await();
+        final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
+        final Map<String,Function1<Covid19DailyReportDataRow,Boolean>> locations = Map.<String,Function1<Covid19DailyReportDataRow,Boolean>>create()
+            .set("Global", (Covid19DailyReportDataRow row) -> true)
+            .set("China", (Covid19DailyReportDataRow row) -> Comparer.equalIgnoreCase(row.getCountryOrRegion(), "China") ||
+                                                            Comparer.equalIgnoreCase(row.getCountryOrRegion(), "Mainland China"))
+            .set("Italy", (Covid19DailyReportDataRow row) -> Comparer.equalIgnoreCase(row.getCountryOrRegion(), "Italy"))
+            .set("South Korea", (Covid19DailyReportDataRow row) -> Comparer.equalIgnoreCase(row.getCountryOrRegion(), "Korea, South"))
+            .set("USA", (Covid19DailyReportDataRow row) -> Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
+            .set("Washington, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "Washington") ||
+                                                     Strings.contains(row.getStateOrProvince(), ", WA")) &&
+                                                    Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
+            .set("Michigan, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "Michigan") ||
+                                                   Strings.contains(row.getStateOrProvince(), ", MI")) &&
+                                                  Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
+            .set("New York, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "New York") ||
+                                                   Strings.contains(row.getStateOrProvince(), ", NY")) &&
+                                                  Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
+            .set("Florida, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "Florida") ||
+                                                  Strings.contains(row.getStateOrProvince(), ", FL")) &&
+                                                 Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
+            .set("Utah, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "Utah") ||
+                                               Strings.contains(row.getStateOrProvince(), ", UT")) &&
+                                              Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"));
 
-            final Iterable<DateTime> datesReported = data.getDatesReported(now);
-            final Iterable<String> countriesReported = data.getCountriesReported(now);
-            final DateTime mostRecentDateReported = datesReported.last();
+        final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
+            .setNewLine('\n')
+            .setTopBorder('-')
+            .setLeftBorder("| ")
+            .setColumnSeparator(" | ")
+            .setRightBorder(" |")
+            .setBottomBorder('-');
 
-            output.writeLine("Summary:").await();
-            CharacterTable.create()
-                .addRow("Dates reported:", Integers.toString(datesReported.getCount()))
-                .addRow("Countries reported:", Integers.toString(countriesReported.getCount()))
-                .addRow("Most recent report:", QubCovid19.toString(mostRecentDateReported))
-                .toString(output, CharacterTableFormat.consise).await();
-            output.writeLine().await();
-            output.writeLine().await();
+        output.writeLine("Confirmed Cases:").await();
+        final CharacterTable confirmedCasesTable = QubCovid19.createConfirmedCasesTable(mostRecentDateReported, previousDays, locations, dataSource);
+        confirmedCasesTable.toString(output, confirmedCasesFormat).await();
+        output.writeLine().await();
+        output.writeLine().await();
 
-            final DateTime reportStartDate = Comparer.minimum(Iterable.create(now, mostRecentDateReported));
-
-            final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
-            final Map<String,Function1<CSVRow,Boolean>> locations = Map.<String,Function1<CSVRow,Boolean>>create()
-                .set("Global", (CSVRow row) -> true)
-                .set("China", (CSVRow row) -> Strings.contains(row.getCell(1), "China"))
-                .set("Italy", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "Italy"))
-                .set("South Korea", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "Korea, South"))
-                .set("USA", (CSVRow row) -> Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("Washington, USA", (CSVRow row) -> (Comparer.equalIgnoreCase(row.getCell(0), "Washington") ||
-                                                         Strings.contains(row.getCell(0), ", WA")) &&
-                                                        Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("Michigan, USA", (CSVRow row) -> (Comparer.equalIgnoreCase(row.getCell(0), "Michigan") ||
-                                                       Strings.contains(row.getCell(0), ", MI")) &&
-                                                      Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("New York, USA", (CSVRow row) -> (Comparer.equalIgnoreCase(row.getCell(0), "New York") ||
-                                                       Strings.contains(row.getCell(0), ", NY")) &&
-                                                      Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("Florida, USA", (CSVRow row) -> (Comparer.equalIgnoreCase(row.getCell(0), "Florida") ||
-                                                      Strings.contains(row.getCell(0), ", FL")) &&
-                                                     Comparer.equalIgnoreCase(row.getCell(1), "US"))
-                .set("Utah, USA", (CSVRow row) -> (Comparer.equalIgnoreCase(row.getCell(0), "Utah") ||
-                                                   Strings.contains(row.getCell(0), ", UT")) &&
-                                                  Comparer.equalIgnoreCase(row.getCell(1), "US"));
-
-            final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
-                .setNewLine('\n')
-                .setTopBorder('-')
-                .setLeftBorder("| ")
-                .setColumnSeparator(" | ")
-                .setRightBorder(" |")
-                .setBottomBorder('-');
-
-            output.writeLine("Confirmed Cases:").await();
-            final CharacterTable confirmedCasesTable = QubCovid19.createConfirmedCasesTable(reportStartDate, previousDays);
-            final Action2<String,Function1<CSVRow,Boolean>> addConfirmedCasesRow = (String location, Function1<CSVRow,Boolean> rowCondition) ->
-            {
-                final List<String> confirmedCasesRow = List.create(location);
-                final int totalConfirmedCases = data.getConfirmedCases(reportStartDate, rowCondition);
-                confirmedCasesRow.add(Integers.toString(totalConfirmedCases));
-                for (final int daysAgo : previousDays)
-                {
-                    final DateTime previousDate = reportStartDate.minus(Duration.days(daysAgo));
-                    confirmedCasesRow.add(Integers.toString(data.getConfirmedCases(previousDate, rowCondition)));
-                }
-                confirmedCasesTable.addRow(confirmedCasesRow);
-            };
-            for (final MapEntry<String,Function1<CSVRow,Boolean>> location : locations)
-            {
-                addConfirmedCasesRow.run(location.getKey(), location.getValue());
-            }
-            confirmedCasesTable.toString(output, confirmedCasesFormat).await();
-            output.writeLine().await();
-            output.writeLine().await();
-
-            output.writeLine("Confirmed Cases Average Change Per Day:").await();
-            final CharacterTable confirmedCasesAverageChangePerDayTable = QubCovid19.createConfirmedCasesTable(null, previousDays);
-            final Action2<String,Function1<CSVRow,Boolean>> addConfirmedCasesAverageChangePerDayRow = (String location, Function1<CSVRow,Boolean> rowCondition) ->
-            {
-                final List<String> confirmedCasesAverageChangePerDayRow = List.create(location);
-                final int totalConfirmedCases = data.getConfirmedCases(reportStartDate, rowCondition);
-                for (final int daysAgo : previousDays)
-                {
-                    final DateTime previousDate = reportStartDate.minus(Duration.days(daysAgo));
-                    final int previousDateConfirmedCases = data.getConfirmedCases(previousDate, rowCondition);
-                    final int confirmedCasesChange = totalConfirmedCases - previousDateConfirmedCases;
-                    final int confirmedCasesAverageChangePerDay = confirmedCasesChange / daysAgo;
-                    confirmedCasesAverageChangePerDayRow.add(Integers.toString(confirmedCasesAverageChangePerDay));
-                }
-                confirmedCasesAverageChangePerDayTable.addRow(confirmedCasesAverageChangePerDayRow);
-            };
-            for (final MapEntry<String,Function1<CSVRow,Boolean>> location : locations)
-            {
-                addConfirmedCasesAverageChangePerDayRow.run(location.getKey(), location.getValue());
-            }
-            confirmedCasesAverageChangePerDayTable.toString(output, confirmedCasesFormat).await();
-            output.writeLine();
-        }
+        output.writeLine("Confirmed Cases Average Change Per Day:").await();
+        final CharacterTable confirmedCasesAverageChangePerDayTable = QubCovid19.createConfirmedCasesAverageChangePerDayTable(mostRecentDateReported, previousDays, locations, dataSource);
+        confirmedCasesAverageChangePerDayTable.toString(output, confirmedCasesFormat).await();
+        output.writeLine().await();
     }
 
-    static CharacterTable createConfirmedCasesTable(DateTime reportStartDate, Iterable<Integer> previousDays)
+    static CharacterTable createConfirmedCasesTable(DateTime reportStartDate, Iterable<Integer> previousDays, Map<String,Function1<Covid19DailyReportDataRow,Boolean>> locations, Covid19DataSource dataSource)
     {
+        PreCondition.assertNotNull(reportStartDate, "reportStartDate");
         PreCondition.assertNotNull(previousDays, "previousDays");
+        PreCondition.assertNotNull(locations, "locations");
+        PreCondition.assertNotNull(dataSource, "dataSource");
 
-        final List<String> row = List.create("Location");
-        if (reportStartDate != null)
+        final Indexable<String> locationNames = locations.getKeys().toList();
+
+        final MutableMap<String,List<Integer>> locationDataRows = Map.create();
+        for (final String locationName : locationNames)
         {
-            row.add(QubCovid19.toString(reportStartDate));
+            locationDataRows.set(locationName, List.create());
         }
+
+        final Covid19DailyReport reportStartDateDailyReport = dataSource.getDailyReport(reportStartDate).await();
+        for (final String locationName : locationNames)
+        {
+            final Function1<Covid19DailyReportDataRow,Boolean> locationCondition = locations.get(locationName).await();
+            final int confirmedCases = Integers.sum(reportStartDateDailyReport.getDataRows()
+                .where(locationCondition)
+                .map(Covid19DailyReportDataRow::getConfirmedCases));
+            locationDataRows.get(locationName).await()
+                .add(confirmedCases);
+        }
+
+        for (final Integer daysAgo : previousDays)
+        {
+            final DateTime previousDay = reportStartDate.minus(Duration.days(daysAgo));
+            final Covid19DailyReport previousDailyReport = dataSource.getDailyReport(previousDay).await();
+            for (final String locationName : locationNames)
+            {
+                final Function1<Covid19DailyReportDataRow,Boolean> locationCondition = locations.get(locationName).await();
+                final int confirmedCases = Integers.sum(previousDailyReport.getDataRows()
+                    .where(locationCondition)
+                    .map(Covid19DailyReportDataRow::getConfirmedCases));
+                locationDataRows.get(locationName).await()
+                    .add(confirmedCases);
+            }
+        }
+
+        final CharacterTable result = CharacterTable.create();
+
+        final List<String> headerRow = List.create("Location");
+        headerRow.add(QubCovid19.toString(reportStartDate));
         if (!Iterable.isNullOrEmpty(previousDays))
         {
-            row.addAll(previousDays.map((Integer daysAgo) -> daysAgo + " days ago"));
+            headerRow.addAll(previousDays.map((Integer daysAgo) -> daysAgo + " days ago"));
         }
-        return CharacterTable.create().addRow(row);
+        result.addRow(headerRow);
+
+        for (final MapEntry<String,List<Integer>> locationRowData : locationDataRows)
+        {
+            result.addRow(List.create(locationRowData.getKey())
+                .addAll(locationRowData.getValue().map(Integers::toString)));
+        }
+
+        PostCondition.assertNotNull(result, "result");
+
+        return result;
+    }
+
+    static CharacterTable createConfirmedCasesAverageChangePerDayTable(DateTime reportStartDate, Iterable<Integer> previousDays, Map<String,Function1<Covid19DailyReportDataRow,Boolean>> locations, Covid19DataSource dataSource)
+    {
+        PreCondition.assertNotNull(reportStartDate, "reportStartDate");
+        PreCondition.assertNotNull(previousDays, "previousDays");
+        PreCondition.assertNotNull(locations, "locations");
+        PreCondition.assertNotNull(dataSource, "dataSource");
+
+        final Indexable<String> locationNames = locations.getKeys().toList();
+
+        final MutableMap<String,Integer> locationReportStartDateConfirmedCases = Map.create();
+        final Covid19DailyReport dailyReport = dataSource.getDailyReport(reportStartDate).await();
+        for (final String locationName : locationNames)
+        {
+            final Function1<Covid19DailyReportDataRow,Boolean> locationCondition = locations.get(locationName).await();
+            final int confirmedCases = Integers.sum(dailyReport.getDataRows()
+                .where(locationCondition)
+                .map(Covid19DailyReportDataRow::getConfirmedCases));
+            locationReportStartDateConfirmedCases.set(locationName, confirmedCases);
+        }
+
+        final MutableMap<String,List<Integer>> locationDataRows = Map.create();
+        for (final String locationName : locationNames)
+        {
+            locationDataRows.set(locationName, List.create());
+        }
+        for (final Integer daysAgo : previousDays)
+        {
+            final DateTime previousDay = reportStartDate.minus(Duration.days(daysAgo));
+            final Covid19DailyReport previousDailyReport = dataSource.getDailyReport(previousDay).await();
+            for (final String locationName : locationNames)
+            {
+                final Function1<Covid19DailyReportDataRow,Boolean> locationCondition = locations.get(locationName).await();
+                final int locationReportStartDateConfirmedCasesCount = locationReportStartDateConfirmedCases.get(locationName).await();
+                final int previousConfirmedCases = Integers.sum(previousDailyReport.getDataRows()
+                    .where(locationCondition)
+                    .map(Covid19DailyReportDataRow::getConfirmedCases));
+                final int averageConfirmedCasesChangePerDay = (locationReportStartDateConfirmedCasesCount - previousConfirmedCases) / daysAgo;
+                locationDataRows.get(locationName).await()
+                    .add(averageConfirmedCasesChangePerDay);
+            }
+        }
+
+        final CharacterTable result = CharacterTable.create();
+
+        final List<String> headerRow = List.create("Location");
+        if (!Iterable.isNullOrEmpty(previousDays))
+        {
+            headerRow.addAll(previousDays.map((Integer daysAgo) -> daysAgo + " days ago"));
+        }
+        result.addRow(headerRow);
+
+        for (final MapEntry<String,List<Integer>> locationRowData : locationDataRows)
+        {
+            result.addRow(List.create(locationRowData.getKey())
+                .addAll(locationRowData.getValue().map(Integers::toString)));
+        }
+
+        PostCondition.assertNotNull(result, "result");
+
+        return result;
     }
 
     static String toString(DateTime date)

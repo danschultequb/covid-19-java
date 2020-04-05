@@ -6,24 +6,20 @@ package qub;
 public class QubCovid19Parameters
 {
     private final CharacterWriteStream output;
-    private final HttpClient httpClient;
-    private final DateTime now;
+    private final Covid19DataSource dataSource;
 
     /**
      * Create a new application parameters object.
      * @param output The output stream of the application.
-     * @param httpClient The HTTP client of the application.
-     * @param now The time at which the application is running.
+     * @param dataSource The source of data about the Covid-19 pandemic.
      */
-    public QubCovid19Parameters(CharacterWriteStream output, HttpClient httpClient, DateTime now)
+    public QubCovid19Parameters(CharacterWriteStream output, Covid19DataSource dataSource)
     {
         PreCondition.assertNotNull(output, "output");
-        PreCondition.assertNotNull(httpClient, "httpClient");
-        PreCondition.assertNotNull(now, "now");
+        PreCondition.assertNotNull(dataSource, "dataSource");
 
         this.output = output;
-        this.httpClient = httpClient;
-        this.now = now;
+        this.dataSource = dataSource;
     }
 
     /**
@@ -36,20 +32,11 @@ public class QubCovid19Parameters
     }
 
     /**
-     * Get the HTTP client of the application.
-     * @return The HTTP client of the application.
+     * Get the source of data about the Covid-19 pandemic.
+     * @return The source of data about the Covid-19 pandemic.
      */
-    public HttpClient getHttpClient()
+    public Covid19DataSource getDataSource()
     {
-        return this.httpClient;
-    }
-
-    /**
-     * Get the time at which the application is running.
-     * @return The time at which the application is running.
-     */
-    public DateTime getNow()
-    {
-        return this.now;
+        return this.dataSource;
     }
 }

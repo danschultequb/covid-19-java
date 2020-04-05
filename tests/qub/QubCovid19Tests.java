@@ -30,7 +30,8 @@ public interface QubCovid19Tests
                         final QubCovid19Parameters parameters = QubCovid19.getParameters(process);
                         test.assertNotNull(parameters);
                         test.assertSame(process.getOutputCharacterWriteStream(), parameters.getOutput());
-                        test.assertNotNull(parameters.getHttpClient());
+                        test.assertNotNull(parameters.getDataSource());
+                        test.assertInstanceOf(parameters.getDataSource(), Covid19GitDataSource.class);
                     }
                 });
 
@@ -68,50 +69,109 @@ public interface QubCovid19Tests
                 runner.test("with non-null parameters", (Test test) ->
                 {
                     final InMemoryCharacterStream output = new InMemoryCharacterStream();
-                    final HttpClient httpClient = HttpClient.create(test.getNetwork());
-                    final DateTime now = DateTime.create(2020, 3, 7);
-                    final QubCovid19Parameters parameters = new QubCovid19Parameters(output, httpClient, now);
+                    final Covid19InMemoryDataSource dataSource = Covid19InMemoryDataSource.create()
+                        .setDailyReport(DateTime.create(2020, 3, 7),
+                            Covid19DailyReport.create(
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("China")
+                                    .setConfirmedCases(80770),
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("Italy")
+                                    .setConfirmedCases(5883),
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("US")
+                                    .setStateOrProvince("WA")
+                                    .setConfirmedCases(102),
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("US")
+                                    .setStateOrProvince("MI")
+                                    .setConfirmedCases(0)))
+                        .setDailyReport(DateTime.create(2020, 3, 6),
+                            Covid19DailyReport.create(
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("China")
+                                    .setConfirmedCases(8077),
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("Italy")
+                                    .setConfirmedCases(588),
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("US")
+                                    .setStateOrProvince("WA")
+                                    .setConfirmedCases(10),
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("US")
+                                    .setStateOrProvince("MI")
+                                    .setConfirmedCases(0)))
+                        .setDailyReport(DateTime.create(2020, 3, 4),
+                            Covid19DailyReport.create(
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("China")
+                                    .setConfirmedCases(807),
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("Italy")
+                                    .setConfirmedCases(58),
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("US")
+                                    .setStateOrProvince("WA")
+                                    .setConfirmedCases(1),
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("US")
+                                    .setStateOrProvince("MI")
+                                    .setConfirmedCases(0)))
+                        .setDailyReport(DateTime.create(2020, 2, 29),
+                            Covid19DailyReport.create(
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("China")
+                                    .setConfirmedCases(80),
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("Italy")
+                                    .setConfirmedCases(5)))
+                        .setDailyReport(DateTime.create(2020, 2, 6),
+                            Covid19DailyReport.create(
+                                Covid19DailyReportDataRow.create()
+                                    .setCountryOrRegion("China")
+                                    .setConfirmedCases(8)));
+                    final QubCovid19Parameters parameters = new QubCovid19Parameters(output, dataSource);
 
                     QubCovid19.run(parameters);
 
                     test.assertEqual(
                         Iterable.create(
-                            "Getting confirmed cases data... Done.",
-                            "Parsing confirmed cases data... Done.",
+                            "Refreshing data... Done.",
                             "",
                             "Summary:",
-                            "Dates reported:     46      ",
-                            "Countries reported: 95      ",
+                            "Dates reported:     5       ",
+                            "Countries reported: 3       ",
                             "Most recent report: 3/7/2020",
                             "",
                             "Confirmed Cases:",
                             "-----------------------------------------------------------------------------------",
                             "| Location        | 3/7/2020 | 1 days ago | 3 days ago | 7 days ago | 30 days ago |",
-                            "| Global          | 105821   | 101784     | 95120      | 86011      | 30817       |",
-                            "| China           | 80770    | 80690      | 80386      | 79356      | 30587       |",
-                            "| Italy           | 5883     | 4636       | 3089       | 1128       | 2           |",
-                            "| South Korea     | 7041     | 6593       | 5621       | 3150       | 23          |",
-                            "| USA             | 402      | 262        | 149        | 68         | 11          |",
-                            "| Washington, USA | 102      | 78         | 39         | 7          | 1           |",
+                            "| Global          | 86755    | 8675       | 866        | 85         | 8           |",
+                            "| China           | 80770    | 8077       | 807        | 80         | 8           |",
+                            "| Italy           | 5883     | 588        | 58         | 5          | 0           |",
+                            "| South Korea     | 0        | 0          | 0          | 0          | 0           |",
+                            "| USA             | 102      | 10         | 1          | 0          | 0           |",
+                            "| Washington, USA | 0        | 0          | 0          | 0          | 0           |",
                             "| Michigan, USA   | 0        | 0          | 0          | 0          | 0           |",
-                            "| New York, USA   | 76       | 31         | 11         | 0          | 0           |",
-                            "| Florida, USA    | 7        | 3          | 2          | 0          | 0           |",
-                            "| Utah, USA       | 1        | 0          | 0          | 0          | 0           |",
+                            "| New York, USA   | 0        | 0          | 0          | 0          | 0           |",
+                            "| Florida, USA    | 0        | 0          | 0          | 0          | 0           |",
+                            "| Utah, USA       | 0        | 0          | 0          | 0          | 0           |",
                             "-----------------------------------------------------------------------------------",
                             "",
                             "Confirmed Cases Average Change Per Day:",
                             "------------------------------------------------------------------------",
                             "| Location        | 1 days ago | 3 days ago | 7 days ago | 30 days ago |",
-                            "| Global          | 4037       | 3567       | 2830       | 2500        |",
-                            "| China           | 80         | 128        | 202        | 1672        |",
-                            "| Italy           | 1247       | 931        | 679        | 196         |",
-                            "| South Korea     | 448        | 473        | 555        | 233         |",
-                            "| USA             | 140        | 84         | 47         | 13          |",
-                            "| Washington, USA | 24         | 21         | 13         | 3           |",
+                            "| Global          | 78080      | 28629      | 12381      | 2891        |",
+                            "| China           | 72693      | 26654      | 11527      | 2692        |",
+                            "| Italy           | 5295       | 1941       | 839        | 196         |",
+                            "| South Korea     | 0          | 0          | 0          | 0           |",
+                            "| USA             | 92         | 33         | 14         | 3           |",
+                            "| Washington, USA | 0          | 0          | 0          | 0           |",
                             "| Michigan, USA   | 0          | 0          | 0          | 0           |",
-                            "| New York, USA   | 45         | 21         | 10         | 2           |",
-                            "| Florida, USA    | 4          | 1          | 1          | 0           |",
-                            "| Utah, USA       | 1          | 0          | 0          | 0           |",
+                            "| New York, USA   | 0          | 0          | 0          | 0           |",
+                            "| Florida, USA    | 0          | 0          | 0          | 0           |",
+                            "| Utah, USA       | 0          | 0          | 0          | 0           |",
                             "------------------------------------------------------------------------"),
                         Strings.getLines(output.getText().await()));
                 });
