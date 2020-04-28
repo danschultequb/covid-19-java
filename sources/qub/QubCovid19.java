@@ -28,7 +28,7 @@ public interface QubCovid19
         {
             profilerParameter.await();
 
-            final CharacterWriteStream output = process.getOutputCharacterWriteStream();
+            final CharacterWriteStream output = process.getOutputWriteStream();
 
             final Folder projectDataFolder = process.getQubProjectDataFolder().await();
             final Git git = Git.create(process);
@@ -43,7 +43,7 @@ public interface QubCovid19
     {
         PreCondition.assertNotNull(parameters, "parameters");
 
-        final IndentedCharacterWriteStream output = new IndentedCharacterWriteStream(parameters.getOutput());
+        final IndentedCharacterWriteStream output = IndentedCharacterWriteStream.create(parameters.getOutput());
         final Covid19DataSource dataSource = parameters.getDataSource();
 
         output.write("Refreshing data...").await();
@@ -53,12 +53,16 @@ public interface QubCovid19
 
         final Covid19Summary summary = dataSource.getDataSummary().await();
         final DateTime mostRecentDateReported = summary.getMostRecentDateReported();
+        final CharacterTableFormat summaryFormat = CharacterTableFormat.create()
+            .setNewLine('\n')
+            .setColumnSeparator(' ')
+            .setColumnHorizontalAlignment(1, HorizontalAlignment.Right);
         output.writeLine("Summary:").await();
         CharacterTable.create()
             .addRow("Dates reported:", Integers.toString(summary.getDatesReportedCount()))
             .addRow("Countries reported:", Integers.toString(summary.getCountriesReportedCount()))
             .addRow("Most recent report:", QubCovid19.toString(mostRecentDateReported))
-            .toString(output, CharacterTableFormat.consise).await();
+            .toString(output, summaryFormat).await();
         output.writeLine().await();
         output.writeLine().await();
 
@@ -93,6 +97,12 @@ public interface QubCovid19
             .setColumnSeparator(" | ")
             .setRightBorder(" |")
             .setBottomBorder('-');
+
+        final int previousDaysCount = previousDays.getCount();
+        for (int i = 0; i < previousDaysCount + 1; ++i)
+        {
+            confirmedCasesFormat.setColumnHorizontalAlignment(i + 1, HorizontalAlignment.Right);
+        }
 
         output.writeLine("Confirmed Cases:").await();
         final CharacterTable confirmedCasesTable = QubCovid19.createConfirmedCasesTable(mostRecentDateReported, previousDays, locations, dataSource);

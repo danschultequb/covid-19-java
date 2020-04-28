@@ -332,21 +332,16 @@ public interface Covid19DailyReportTests
 
                 runner.test("with disposed", (Test test) ->
                 {
-                    final InMemoryByteStream byteStream = new InMemoryByteStream().endOfStream();
+                    final ByteReadStream byteStream = ByteReadStream.create();
                     byteStream.dispose().await();
-                    test.assertThrows(() -> Covid19DailyReport.parse((ByteReadStream)null),
-                        new PreConditionFailure("byteReadStream cannot be null."));
+                    test.assertThrows(() -> Covid19DailyReport.parse(byteStream).await(),
+                        new PreConditionFailure("byteReadStream.isDisposed() cannot be true."));
                 });
 
                 final Action3<String,CSVDocument,Iterable<Covid19DailyReportDataRow>> parseTest = (String testName, CSVDocument csvDocument, Iterable<Covid19DailyReportDataRow> expectedDataRows) ->
                 {
                     runner.test(testName, (Test test) ->
                     {
-                        final byte[] csvDocumentBytes = CharacterEncoding.UTF_8.encode(csvDocument.toString()).await();
-                        try (InMemoryByteStream byteStream = new InMemoryByteStream())
-                        {
-
-                        }
                         final Covid19DailyReport dailyReport = Covid19DailyReport.parse(csvDocument).await();
                         test.assertNotNull(dailyReport);
                         test.assertEqual(expectedDataRows, dailyReport.getDataRows());

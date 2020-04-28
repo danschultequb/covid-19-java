@@ -19,7 +19,7 @@ public interface QubCovid19ParametersTests
 
                 runner.test("with null dataSource", (Test test) ->
                 {
-                    final CharacterWriteStream output = new InMemoryCharacterStream();
+                    final CharacterWriteStream output = InMemoryCharacterStream.create();
                     final Covid19DataSource dataSource = null;
 
                     test.assertThrows(() -> new QubCovid19Parameters(output, dataSource),
@@ -28,7 +28,7 @@ public interface QubCovid19ParametersTests
 
                 runner.test("with valid arguments", (Test test) ->
                 {
-                    final CharacterWriteStream output = new InMemoryCharacterStream();
+                    final CharacterWriteStream output = InMemoryCharacterStream.create();
                     final Covid19DataSource dataSource = Covid19InMemoryDataSource.create();
 
                     final QubCovid19Parameters parameters = new QubCovid19Parameters(output, dataSource);

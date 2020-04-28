@@ -75,27 +75,24 @@ public class Covid19DailyReport
         });
     }
 
+    public static Result<Covid19DailyReport> parse(File file)
+    {
+        PreCondition.assertNotNull(file, "file");
+
+        return Result.createUsing(
+            () -> ByteReadStream.buffer(file.getContentReadStream().await()),
+            (ByteReadStream byteReadStream) -> Covid19DailyReport.parse(byteReadStream).await());
+    }
+
     public static Result<Covid19DailyReport> parse(ByteReadStream byteReadStream)
     {
         PreCondition.assertNotNull(byteReadStream, "byteReadStream");
+        PreCondition.assertNotDisposed(byteReadStream, "byteReadStream.isDisposed()");
 
         return Result.create(() ->
         {
             final CSVDocument csvDocument = CSV.parse(byteReadStream).await();
             return Covid19DailyReport.parse(csvDocument).await();
-        });
-    }
-
-    public static Result<Covid19DailyReport> parse(File file)
-    {
-        PreCondition.assertNotNull(file, "file");
-
-        return Result.create(() ->
-        {
-            try (final ByteReadStream fileContentByteReadStream = new BufferedByteReadStream(file.getContentByteReadStream().await()))
-            {
-                return Covid19DailyReport.parse(fileContentByteReadStream).await();
-            }
         });
     }
 
