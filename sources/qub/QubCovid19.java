@@ -88,7 +88,9 @@ public interface QubCovid19
                                                  Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
             .set("Utah, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "Utah") ||
                                                Strings.contains(row.getStateOrProvince(), ", UT")) &&
-                                              Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"));
+                                              Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
+            .set("Utah County, UT, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "Utah") || Strings.contains(row.getStateOrProvince(), ", UT")) &&
+                                                                        Comparer.equalIgnoreCase(row.getCounty(), "Utah"));
 
         final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
             .setNewLine('\n')
