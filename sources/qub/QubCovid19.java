@@ -23,17 +23,19 @@ public interface QubCovid19
             .setApplicationDescription("Used to gather, consolidate, and report data about the COVID-19 virus.");
         final CommandLineParameterProfiler profilerParameter = parameters.addProfiler(process, QubCovid19.class);
         final CommandLineParameterHelp helpParameter = parameters.addHelp();
+        final CommandLineParameterVerbose verboseParameter = parameters.addVerbose(process);
 
         if (!helpParameter.showApplicationHelpLines(process).await())
         {
             profilerParameter.await();
 
             final CharacterWriteStream output = process.getOutputWriteStream();
+            final VerboseCharacterWriteStream verbose = verboseParameter.getVerboseCharacterWriteStream().await();
 
             final Folder projectDataFolder = process.getQubProjectDataFolder().await();
             final Git git = Git.create(process);
-            final Covid19DataSource dataSource = Covid19GitDataSource.create(projectDataFolder, git);
-            result = new QubCovid19Parameters(output, dataSource);
+            final Covid19DataSource dataSource = Covid19GitDataSource.create(projectDataFolder, git, verbose);
+            result = new QubCovid19Parameters(output, verbose, dataSource);
         }
 
         return result;

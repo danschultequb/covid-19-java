@@ -6,6 +6,7 @@ package qub;
 public class QubCovid19Parameters
 {
     private final CharacterWriteStream output;
+    private final VerboseCharacterWriteStream verbose;
     private final Covid19DataSource dataSource;
 
     /**
@@ -13,12 +14,14 @@ public class QubCovid19Parameters
      * @param output The output stream of the application.
      * @param dataSource The source of data about the Covid-19 pandemic.
      */
-    public QubCovid19Parameters(CharacterWriteStream output, Covid19DataSource dataSource)
+    public QubCovid19Parameters(CharacterWriteStream output, VerboseCharacterWriteStream verbose, Covid19DataSource dataSource)
     {
         PreCondition.assertNotNull(output, "output");
+        PreCondition.assertNotNull(verbose, "verbose");
         PreCondition.assertNotNull(dataSource, "dataSource");
 
         this.output = output;
+        this.verbose = verbose;
         this.dataSource = dataSource;
     }
 
@@ -29,6 +32,15 @@ public class QubCovid19Parameters
     public CharacterWriteStream getOutput()
     {
         return this.output;
+    }
+
+    /**
+     * Get the verbose stream of the application.
+     * @return The verbose stream of the application.
+     */
+    public VerboseCharacterWriteStream getVerbose()
+    {
+        return this.verbose;
     }
 
     /**

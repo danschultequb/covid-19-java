@@ -7,19 +7,22 @@ public class Covid19GitDataSource implements Covid19DataSource
 
     private final Git git;
     private final Folder gitRepositoryFolder;
+    private final CharacterWriteStream verbose;
 
-    private Covid19GitDataSource(Folder projectDataFolder, Git git)
+    private Covid19GitDataSource(Folder projectDataFolder, Git git, CharacterWriteStream verbose)
     {
         PreCondition.assertNotNull(projectDataFolder, "projectDataFolder");
         PreCondition.assertNotNull(git, "git");
+        PreCondition.assertNotNull(verbose, "verbose");
 
         this.git = git;
         this.gitRepositoryFolder = projectDataFolder.getFolder(Covid19GitDataSource.gitRepositoryName).await();
+        this.verbose = verbose;
     }
 
-    public static Covid19GitDataSource create(Folder projectDataFolder, Git git)
+    public static Covid19GitDataSource create(Folder projectDataFolder, Git git, CharacterWriteStream verbose)
     {
-        return new Covid19GitDataSource(projectDataFolder, git);
+        return new Covid19GitDataSource(projectDataFolder, git, verbose);
     }
 
     @Override
@@ -31,12 +34,14 @@ public class Covid19GitDataSource implements Covid19DataSource
             {
                 this.git.getPullProcessBuilder().await()
                     .setWorkingFolder(this.gitRepositoryFolder)
+                    .setVerbose(this.verbose)
                     .run().await();
             }
             else
             {
                 this.git.getCloneProcessBuilder(Covid19GitDataSource.githubRepositoryUrl).await()
                     .setDirectory(this.gitRepositoryFolder)
+                    .setVerbose(this.verbose)
                     .run().await();
             }
         });

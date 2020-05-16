@@ -47,10 +47,11 @@ public interface QubCovid19Tests
 
                         test.assertEqual(
                             Iterable.create(
-                                "Usage: qub/covid-19-java [--profiler] [--help]",
+                                "Usage: qub/covid-19-java [--profiler] [--help] [--verbose]",
                                 "  Used to gather, consolidate, and report data about the COVID-19 virus.",
                                 "  --profiler: Whether or not this application should pause before it is run to allow a profiler to be attached.",
-                                "  --help(?): Show the help message for this application."
+                                "  --help(?): Show the help message for this application.",
+                                "  --verbose(v): Whether or not to show verbose logs."
                             ),
                             Strings.getLines(output.getText().await()));
                         test.assertEqual(-1, process.getExitCode());
@@ -69,6 +70,7 @@ public interface QubCovid19Tests
                 runner.test("with non-null parameters", (Test test) ->
                 {
                     final InMemoryCharacterToByteStream output = InMemoryCharacterToByteStream.create();
+                    final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
                     final Covid19InMemoryDataSource dataSource = Covid19InMemoryDataSource.create()
                         .setDailyReport(DateTime.create(2020, 3, 7),
                             Covid19DailyReport.create(
@@ -131,7 +133,7 @@ public interface QubCovid19Tests
                                 Covid19DailyReportDataRow.create()
                                     .setCountryOrRegion("China")
                                     .setConfirmedCases(8)));
-                    final QubCovid19Parameters parameters = new QubCovid19Parameters(output, dataSource);
+                    final QubCovid19Parameters parameters = new QubCovid19Parameters(output, verbose, dataSource);
 
                     QubCovid19.run(parameters);
 
@@ -178,12 +180,13 @@ public interface QubCovid19Tests
                         Strings.getLines(output.getText().await()));
                 });
 
-                runner.test("with actual data", (Test test) ->
+                runner.test("with actual data", runner.skip(), (Test test) ->
                 {
                     final InMemoryCharacterStream output = InMemoryCharacterStream.create();
+                    final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
                     final Git git = Git.create(test.getProcess());
-                    final Covid19GitDataSource dataSource = Covid19GitDataSource.create(test.getFileSystem().getFolder("C:/qub/qub/covid-19-java/data/").await(), git);
-                    final QubCovid19Parameters parameters = new QubCovid19Parameters(output, dataSource);
+                    final Covid19GitDataSource dataSource = Covid19GitDataSource.create(test.getFileSystem().getFolder("C:/qub/qub/covid-19-java/data/").await(), git, verbose);
+                    final QubCovid19Parameters parameters = new QubCovid19Parameters(output, verbose, dataSource);
 
                     QubCovid19.run(parameters);
 
