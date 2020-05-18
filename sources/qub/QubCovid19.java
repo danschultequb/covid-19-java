@@ -69,30 +69,55 @@ public interface QubCovid19
         output.writeLine().await();
 
         final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
-        final Map<String,Function1<Covid19DailyReportDataRow,Boolean>> locations = Map.<String,Function1<Covid19DailyReportDataRow,Boolean>>create()
-            .set("Global", (Covid19DailyReportDataRow row) -> true)
-            .set("China", (Covid19DailyReportDataRow row) -> Comparer.equalIgnoreCase(row.getCountryOrRegion(), "China") ||
-                                                            Comparer.equalIgnoreCase(row.getCountryOrRegion(), "Mainland China"))
-            .set("Italy", (Covid19DailyReportDataRow row) -> Comparer.equalIgnoreCase(row.getCountryOrRegion(), "Italy"))
-            .set("South Korea", (Covid19DailyReportDataRow row) -> Comparer.equalIgnoreCase(row.getCountryOrRegion(), "Korea, South"))
-            .set("USA", (Covid19DailyReportDataRow row) -> Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
-            .set("Washington, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "Washington") ||
-                                                     Strings.contains(row.getStateOrProvince(), ", WA")) &&
-                                                    Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
-            .set("Michigan, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "Michigan") ||
-                                                   Strings.contains(row.getStateOrProvince(), ", MI")) &&
-                                                  Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
-            .set("New York, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "New York") ||
-                                                   Strings.contains(row.getStateOrProvince(), ", NY")) &&
-                                                  Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
-            .set("Florida, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "Florida") ||
-                                                  Strings.contains(row.getStateOrProvince(), ", FL")) &&
-                                                 Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
-            .set("Utah, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "Utah") ||
-                                               Strings.contains(row.getStateOrProvince(), ", UT")) &&
-                                              Comparer.equalIgnoreCase(row.getCountryOrRegion(), "US"))
-            .set("Utah County, UT, USA", (Covid19DailyReportDataRow row) -> (Comparer.equalIgnoreCase(row.getStateOrProvince(), "Utah") || Strings.contains(row.getStateOrProvince(), ", UT")) &&
-                                                                        Comparer.equalIgnoreCase(row.getCounty(), "Utah"));
+        final Iterable<Covid19Location> locations = Iterable.create(
+            Covid19Location.create("Global"),
+            Covid19Location.create("China")
+                .setCondition(Covid19LocationCondition.or(
+                    Covid19LocationCondition.countryOrRegionEquals("China"),
+                    Covid19LocationCondition.countryOrRegionEquals("Mainland China"))),
+            Covid19Location.create("Italy")
+                .setCondition(Covid19LocationCondition.countryOrRegionEquals("Italy")),
+            Covid19Location.create("South Korea")
+                .setCondition(Covid19LocationCondition.countryOrRegionEquals("Korea, South")),
+            Covid19Location.create("USA")
+                .setCondition(Covid19LocationCondition.countryOrRegionEquals("US")),
+            Covid19Location.create("Washington, USA")
+                .setCondition(Covid19LocationCondition.and(
+                    Covid19LocationCondition.countryOrRegionEquals("US"),
+                    Covid19LocationCondition.or(
+                        Covid19LocationCondition.stateOrProvinceEquals("Washington"),
+                        Covid19LocationCondition.stateOrProvinceContains(", WA")))),
+            Covid19Location.create("Michigan, USA")
+                .setCondition(Covid19LocationCondition.and(
+                    Covid19LocationCondition.countryOrRegionEquals("US"),
+                    Covid19LocationCondition.or(
+                        Covid19LocationCondition.stateOrProvinceEquals("Michigan"),
+                        Covid19LocationCondition.stateOrProvinceContains(", MI")))),
+            Covid19Location.create("New York, USA")
+                .setCondition(Covid19LocationCondition.and(
+                    Covid19LocationCondition.countryOrRegionEquals("US"),
+                    Covid19LocationCondition.or(
+                        Covid19LocationCondition.stateOrProvinceEquals("New York"),
+                        Covid19LocationCondition.stateOrProvinceContains(", NY")))),
+            Covid19Location.create("Florida, USA")
+                .setCondition(Covid19LocationCondition.and(
+                    Covid19LocationCondition.countryOrRegionEquals("US"),
+                    Covid19LocationCondition.or(
+                        Covid19LocationCondition.stateOrProvinceEquals("Florida"),
+                        Covid19LocationCondition.stateOrProvinceContains(", FL")))),
+            Covid19Location.create("Utah, USA")
+                .setCondition(Covid19LocationCondition.and(
+                    Covid19LocationCondition.countryOrRegionEquals("US"),
+                    Covid19LocationCondition.or(
+                        Covid19LocationCondition.stateOrProvinceEquals("Utah"),
+                        Covid19LocationCondition.stateOrProvinceContains(", UT")))),
+            Covid19Location.create("Utah County, UT, USA")
+                .setCondition(Covid19LocationCondition.and(
+                    Covid19LocationCondition.countryOrRegionEquals("US"),
+                    Covid19LocationCondition.or(
+                        Covid19LocationCondition.stateOrProvinceEquals("Utah"),
+                        Covid19LocationCondition.stateOrProvinceContains(", UT")),
+                    Covid19LocationCondition.countyEquals("Utah"))));
 
         final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
             .setNewLine('\n')
@@ -120,29 +145,26 @@ public interface QubCovid19
         output.writeLine().await();
     }
 
-    static CharacterTable createConfirmedCasesTable(DateTime reportStartDate, Iterable<Integer> previousDays, Map<String,Function1<Covid19DailyReportDataRow,Boolean>> locations, Covid19DataSource dataSource)
+    static CharacterTable createConfirmedCasesTable(DateTime reportStartDate, Iterable<Integer> previousDays, Iterable<Covid19Location> locations, Covid19DataSource dataSource)
     {
         PreCondition.assertNotNull(reportStartDate, "reportStartDate");
         PreCondition.assertNotNull(previousDays, "previousDays");
         PreCondition.assertNotNull(locations, "locations");
         PreCondition.assertNotNull(dataSource, "dataSource");
 
-        final Indexable<String> locationNames = locations.getKeys().toList();
-
         final MutableMap<String,List<Integer>> locationDataRows = Map.create();
-        for (final String locationName : locationNames)
+        for (final Covid19Location location : locations)
         {
-            locationDataRows.set(locationName, List.create());
+            locationDataRows.set(location.getName(), List.create());
         }
 
         final Covid19DailyReport reportStartDateDailyReport = dataSource.getDailyReport(reportStartDate).await();
-        for (final String locationName : locationNames)
+        for (final Covid19Location location : locations)
         {
-            final Function1<Covid19DailyReportDataRow,Boolean> locationCondition = locations.get(locationName).await();
             final int confirmedCases = Integers.sum(reportStartDateDailyReport.getDataRows()
-                .where(locationCondition)
+                .where(location::matches)
                 .map(Covid19DailyReportDataRow::getConfirmedCases));
-            locationDataRows.get(locationName).await()
+            locationDataRows.get(location.getName()).await()
                 .add(confirmedCases);
         }
 
@@ -150,13 +172,12 @@ public interface QubCovid19
         {
             final DateTime previousDay = reportStartDate.minus(Duration.days(daysAgo));
             final Covid19DailyReport previousDailyReport = dataSource.getDailyReport(previousDay).await();
-            for (final String locationName : locationNames)
+            for (final Covid19Location location : locations)
             {
-                final Function1<Covid19DailyReportDataRow,Boolean> locationCondition = locations.get(locationName).await();
                 final int confirmedCases = Integers.sum(previousDailyReport.getDataRows()
-                    .where(locationCondition)
+                    .where(location::matches)
                     .map(Covid19DailyReportDataRow::getConfirmedCases));
-                locationDataRows.get(locationName).await()
+                locationDataRows.get(location.getName()).await()
                     .add(confirmedCases);
             }
         }
@@ -182,44 +203,41 @@ public interface QubCovid19
         return result;
     }
 
-    static CharacterTable createConfirmedCasesAverageChangePerDayTable(DateTime reportStartDate, Iterable<Integer> previousDays, Map<String,Function1<Covid19DailyReportDataRow,Boolean>> locations, Covid19DataSource dataSource)
+    static CharacterTable createConfirmedCasesAverageChangePerDayTable(DateTime reportStartDate, Iterable<Integer> previousDays, Iterable<Covid19Location> locations, Covid19DataSource dataSource)
     {
         PreCondition.assertNotNull(reportStartDate, "reportStartDate");
         PreCondition.assertNotNull(previousDays, "previousDays");
         PreCondition.assertNotNull(locations, "locations");
         PreCondition.assertNotNull(dataSource, "dataSource");
 
-        final Indexable<String> locationNames = locations.getKeys().toList();
-
         final MutableMap<String,Integer> locationReportStartDateConfirmedCases = Map.create();
         final Covid19DailyReport dailyReport = dataSource.getDailyReport(reportStartDate).await();
-        for (final String locationName : locationNames)
+        for (final Covid19Location location : locations)
         {
-            final Function1<Covid19DailyReportDataRow,Boolean> locationCondition = locations.get(locationName).await();
             final int confirmedCases = Integers.sum(dailyReport.getDataRows()
-                .where(locationCondition)
+                .where(location::matches)
                 .map(Covid19DailyReportDataRow::getConfirmedCases));
-            locationReportStartDateConfirmedCases.set(locationName, confirmedCases);
+            locationReportStartDateConfirmedCases.set(location.getName(), confirmedCases);
         }
 
         final MutableMap<String,List<Integer>> locationDataRows = Map.create();
-        for (final String locationName : locationNames)
+        for (final Covid19Location location : locations)
         {
-            locationDataRows.set(locationName, List.create());
+            locationDataRows.set(location.getName(), List.create());
         }
+
         for (final Integer daysAgo : previousDays)
         {
             final DateTime previousDay = reportStartDate.minus(Duration.days(daysAgo));
             final Covid19DailyReport previousDailyReport = dataSource.getDailyReport(previousDay).await();
-            for (final String locationName : locationNames)
+            for (final Covid19Location location : locations)
             {
-                final Function1<Covid19DailyReportDataRow,Boolean> locationCondition = locations.get(locationName).await();
-                final int locationReportStartDateConfirmedCasesCount = locationReportStartDateConfirmedCases.get(locationName).await();
+                final int locationReportStartDateConfirmedCasesCount = locationReportStartDateConfirmedCases.get(location.getName()).await();
                 final int previousConfirmedCases = Integers.sum(previousDailyReport.getDataRows()
-                    .where(locationCondition)
+                    .where(location::matches)
                     .map(Covid19DailyReportDataRow::getConfirmedCases));
                 final int averageConfirmedCasesChangePerDay = (locationReportStartDateConfirmedCasesCount - previousConfirmedCases) / daysAgo;
-                locationDataRows.get(locationName).await()
+                locationDataRows.get(location.getName()).await()
                     .add(averageConfirmedCasesChangePerDay);
             }
         }

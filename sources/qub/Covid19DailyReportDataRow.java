@@ -2,6 +2,11 @@ package qub;
 
 public class Covid19DailyReportDataRow
 {
+    public static final String countyPropertyName = "county";
+    public static final String stateOrProvincePropertyName = "stateOrProvince";
+    public static final String countryOrRegionPropertyName = "countryOrRegion";
+    public static final String confirmedCasesPropertyName = "confirmedCases";
+
     private String county;
     private String stateOrProvince;
     private String countryOrRegion;
@@ -73,44 +78,19 @@ public class Covid19DailyReportDataRow
         return this;
     }
 
+    public JSONObject toJson()
+    {
+        return JSONObject.create()
+            .setString(Covid19DailyReportDataRow.countyPropertyName, this.county)
+            .setString(Covid19DailyReportDataRow.stateOrProvincePropertyName, this.stateOrProvince)
+            .setString(Covid19DailyReportDataRow.countryOrRegionPropertyName, this.countryOrRegion)
+            .setString(Covid19DailyReportDataRow.confirmedCasesPropertyName, Strings.escapeAndQuote(this.confirmedCases));
+    }
+
     @Override
     public String toString()
     {
-        final CharacterList list = CharacterList.create();
-
-        list.add('{');
-
-        Covid19DailyReportDataRow.addProperty(list, "county", this.county);
-        Covid19DailyReportDataRow.addProperty(list, "stateOrProvince", this.stateOrProvince);
-        Covid19DailyReportDataRow.addProperty(list, "countryOrRegion", this.countryOrRegion);
-        Covid19DailyReportDataRow.addProperty(list, "confirmedCases", this.confirmedCases);
-
-        list.add('}');
-
-        final String result = list.toString(true);
-
-        PostCondition.assertNotNullAndNotEmpty(result, "result");
-
-        return result;
-    }
-
-    private static void addProperty(CharacterList list, String propertyName, Object propertyValue)
-    {
-        PreCondition.assertNotNull(list, "list");
-        PreCondition.assertNotNullAndNotEmpty(propertyName, "propertyName");
-
-        final String escapedAndQuotedPropertyValue = Strings.escapeAndQuote(propertyValue);
-        if (escapedAndQuotedPropertyValue != null)
-        {
-            if (!list.endsWith('{'))
-            {
-                list.add(',');
-            }
-
-            list.addAll(Strings.escapeAndQuote(propertyName));
-            list.add(':');
-            list.addAll(escapedAndQuotedPropertyValue);
-        }
+        return this.toJson().toString();
     }
 
     @Override
