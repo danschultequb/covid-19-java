@@ -2,6 +2,10 @@ package qub;
 
 public class Covid19LocationPropertyCondition implements Covid19LocationCondition
 {
+    private static final String propertyNamePropertyName = "propertyName";
+    private static final String operatorPropertyName = "operator";
+    private static final String expectedPropertyValuePropertyName = "expectedPropertyValue";
+
     private static final Map<String,Function1<Covid19DailyReportDataRow,Object>> propertyGetters = ListMap.<String,Function1<Covid19DailyReportDataRow,Object>>create(Comparer::equalIgnoreCase)
         .set(Covid19DailyReportDataRow.stateOrProvincePropertyName, Covid19DailyReportDataRow::getStateOrProvince)
         .set(Covid19DailyReportDataRow.countryOrRegionPropertyName, Covid19DailyReportDataRow::getCountryOrRegion)
@@ -30,6 +34,21 @@ public class Covid19LocationPropertyCondition implements Covid19LocationConditio
         return new Covid19LocationPropertyCondition(propertyName, operator, expectedPropertyValue);
     }
 
+    public String getPropertyName()
+    {
+        return this.propertyName;
+    }
+
+    public Covid19LocationPropertyConditionOperator getOperator()
+    {
+        return this.operator;
+    }
+
+    public Object getExpectedPropertyValue()
+    {
+        return this.expectedPropertyValue;
+    }
+
     @Override
     public boolean matches(Covid19DailyReportDataRow dataRow)
     {
@@ -53,6 +72,33 @@ public class Covid19LocationPropertyCondition implements Covid19LocationConditio
                 }
             }
         }
+
+        return result;
+    }
+
+    @Override
+    public JSONObject toJson()
+    {
+        final JSONObject result = JSONObject.create()
+            .setString(Covid19LocationPropertyCondition.propertyNamePropertyName, this.propertyName)
+            .setString(Covid19LocationPropertyCondition.operatorPropertyName, this.operator.toString());
+
+        JSONSegment expectedPropertyValueSegment;
+        if (this.expectedPropertyValue == null)
+        {
+            expectedPropertyValueSegment = JSONNull.segment;
+        }
+        else if (this.expectedPropertyValue instanceof Number)
+        {
+            expectedPropertyValueSegment = JSONNumber.get(((Number)this.expectedPropertyValue).doubleValue());
+        }
+        else
+        {
+            expectedPropertyValueSegment = JSONString.get(this.expectedPropertyValue.toString());
+        }
+        result.set(Covid19LocationPropertyCondition.expectedPropertyValuePropertyName, expectedPropertyValueSegment);
+
+        PostCondition.assertNotNull(result, "result");
 
         return result;
     }

@@ -2,6 +2,9 @@ package qub;
 
 public class Covid19Location
 {
+    public static final String namePropertyName = "name";
+    public static final String conditionPropertyName = "condition";
+
     private final String name;
     private Covid19LocationCondition condition;
 
@@ -10,7 +13,6 @@ public class Covid19Location
         PreCondition.assertNotNullAndNotEmpty(name, "name");
 
         this.name = name;
-        this.condition = (Covid19DailyReportDataRow dataRow) -> true;
     }
 
     public static Covid19Location create(String name)
@@ -36,6 +38,15 @@ public class Covid19Location
     {
         PreCondition.assertNotNull(dataRow, "dataRow");
 
-        return this.condition.matches(dataRow);
+        return this.condition == null || this.condition.matches(dataRow);
+    }
+
+    public JSONObject toJson()
+    {
+        return JSONObject.create()
+            .setString(Covid19Location.namePropertyName, this.name)
+            .set(Covid19Location.conditionPropertyName, this.condition == null
+                ? JSONNull.segment
+                : this.condition.toJson());
     }
 }

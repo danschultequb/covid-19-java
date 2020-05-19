@@ -12,6 +12,12 @@ public interface Covid19LocationCondition
      */
     boolean matches(Covid19DailyReportDataRow dataRow);
 
+    /**
+     * Convert this location condition to its JSON representation.
+     * @return The JSON representation of this location condition.
+     */
+    JSONObject toJson();
+
     static Covid19LocationGroupCondition and(Covid19LocationCondition... conditions)
     {
         return Covid19LocationGroupCondition.create(Covid19LocationGroupConditionOperator.And)
@@ -32,12 +38,12 @@ public interface Covid19LocationCondition
             expectedCountryOrRegion);
     }
 
-    static Covid19LocationPropertyCondition countryOrRegionContains(String expectedCountryOrRegion)
+    static Covid19LocationPropertyCondition countryOrRegionContains(String expectedCountryOrRegionSubstring)
     {
         return Covid19LocationPropertyCondition.create(
             Covid19DailyReportDataRow.countryOrRegionPropertyName,
             Covid19LocationPropertyConditionOperator.Contains,
-            expectedCountryOrRegion);
+            expectedCountryOrRegionSubstring);
     }
 
     static Covid19LocationPropertyCondition stateOrProvinceEquals(String expectedStateOrProvince)
@@ -48,12 +54,12 @@ public interface Covid19LocationCondition
             expectedStateOrProvince);
     }
 
-    static Covid19LocationPropertyCondition stateOrProvinceContains(String expectedStateOrProvince)
+    static Covid19LocationPropertyCondition stateOrProvinceContains(String expectedStateOrProvinceSubstring)
     {
         return Covid19LocationPropertyCondition.create(
             Covid19DailyReportDataRow.stateOrProvincePropertyName,
             Covid19LocationPropertyConditionOperator.Contains,
-            expectedStateOrProvince);
+            expectedStateOrProvinceSubstring);
     }
 
     static Covid19LocationPropertyCondition countyEquals(String expectedCounty)

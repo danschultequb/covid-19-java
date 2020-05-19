@@ -35,7 +35,7 @@ public interface QubCovid19
             final Folder projectDataFolder = process.getQubProjectDataFolder().await();
             final Git git = Git.create(process);
             final Covid19DataSource dataSource = Covid19GitDataSource.create(projectDataFolder, git, verbose);
-            result = new QubCovid19Parameters(output, verbose, dataSource);
+            result = new QubCovid19Parameters(output, verbose, projectDataFolder, dataSource);
         }
 
         return result;
@@ -46,6 +46,7 @@ public interface QubCovid19
         PreCondition.assertNotNull(parameters, "parameters");
 
         final IndentedCharacterWriteStream output = IndentedCharacterWriteStream.create(parameters.getOutput());
+        final Folder dataFolder = parameters.getDataFolder();
         final Covid19DataSource dataSource = parameters.getDataSource();
 
         output.write("Refreshing data...").await();
@@ -68,7 +69,6 @@ public interface QubCovid19
         output.writeLine().await();
         output.writeLine().await();
 
-        final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
         final Iterable<Covid19Location> locations = Iterable.create(
             Covid19Location.create("Global"),
             Covid19Location.create("China")
@@ -118,6 +118,21 @@ public interface QubCovid19
                         Covid19LocationCondition.stateOrProvinceEquals("Utah"),
                         Covid19LocationCondition.stateOrProvinceContains(", UT")),
                     Covid19LocationCondition.countyEquals("Utah"))));
+
+
+        final File locationsJsonFile = dataFolder.getFile("locations.json").await();
+        if (!locationsJsonFile.exists().await())
+        {
+            try (final IndentedCharacterWriteStream locationsJsonWriteStream = IndentedCharacterWriteStream.create(locationsJsonFile.getContentCharacterWriteStream().await()))
+            {
+                JSONObject.create()
+                    .setArray("locations", locations.map(Covid19Location::toJson))
+                    .toString(locationsJsonWriteStream, JSONFormat.pretty)
+                    .await();
+            }
+        }
+
+        final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
 
         final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
             .setNewLine('\n')

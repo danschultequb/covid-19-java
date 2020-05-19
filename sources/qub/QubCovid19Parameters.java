@@ -7,6 +7,7 @@ public class QubCovid19Parameters
 {
     private final CharacterWriteStream output;
     private final VerboseCharacterWriteStream verbose;
+    private final Folder dataFolder;
     private final Covid19DataSource dataSource;
 
     /**
@@ -14,14 +15,16 @@ public class QubCovid19Parameters
      * @param output The output stream of the application.
      * @param dataSource The source of data about the Covid-19 pandemic.
      */
-    public QubCovid19Parameters(CharacterWriteStream output, VerboseCharacterWriteStream verbose, Covid19DataSource dataSource)
+    public QubCovid19Parameters(CharacterWriteStream output, VerboseCharacterWriteStream verbose, Folder dataFolder, Covid19DataSource dataSource)
     {
         PreCondition.assertNotNull(output, "output");
         PreCondition.assertNotNull(verbose, "verbose");
+        PreCondition.assertNotNull(dataFolder, "dataFolder");
         PreCondition.assertNotNull(dataSource, "dataSource");
 
         this.output = output;
         this.verbose = verbose;
+        this.dataFolder = dataFolder;
         this.dataSource = dataSource;
     }
 
@@ -41,6 +44,11 @@ public class QubCovid19Parameters
     public VerboseCharacterWriteStream getVerbose()
     {
         return this.verbose;
+    }
+
+    public Folder getDataFolder()
+    {
+        return this.dataFolder;
     }
 
     /**

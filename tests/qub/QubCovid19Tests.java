@@ -71,6 +71,9 @@ public interface QubCovid19Tests
                 {
                     final InMemoryCharacterToByteStream output = InMemoryCharacterToByteStream.create();
                     final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
+                    final InMemoryFileSystem fileSystem = new InMemoryFileSystem(test.getClock());
+                    fileSystem.createRoot("/").await();
+                    final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     final Covid19InMemoryDataSource dataSource = Covid19InMemoryDataSource.create()
                         .setDailyReport(DateTime.create(2020, 3, 7),
                             Covid19DailyReport.create(
@@ -133,7 +136,7 @@ public interface QubCovid19Tests
                                 Covid19DailyReportDataRow.create()
                                     .setCountryOrRegion("China")
                                     .setConfirmedCases(8)));
-                    final QubCovid19Parameters parameters = new QubCovid19Parameters(output, verbose, dataSource);
+                    final QubCovid19Parameters parameters = new QubCovid19Parameters(output, verbose, dataFolder, dataSource);
 
                     QubCovid19.run(parameters);
 
@@ -178,15 +181,200 @@ public interface QubCovid19Tests
                             "| Utah County, UT, USA |          0 |          0 |          0 |           0 |",
                             "-----------------------------------------------------------------------------"),
                         Strings.getLines(output.getText().await()));
+
+                    test.assertEqual(
+                        JSONObject.create()
+                            .setArray("locations", Iterable.create(
+                                JSONObject.create()
+                                    .setString("name", "Global")
+                                    .setNull("condition"),
+                                JSONObject.create()
+                                    .setString("name", "China")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "Or")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "China"),
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "Mainland China")))),
+                                JSONObject.create()
+                                    .setString("name", "Italy")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("propertyName", "countryOrRegion")
+                                        .setString("operator", "Equals")
+                                        .setString("expectedPropertyValue", "Italy")),
+                                JSONObject.create()
+                                    .setString("name", "South Korea")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("propertyName", "countryOrRegion")
+                                        .setString("operator", "Equals")
+                                        .setString("expectedPropertyValue", "Korea, South")),
+                                JSONObject.create()
+                                    .setString("name", "USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("propertyName", "countryOrRegion")
+                                        .setString("operator", "Equals")
+                                        .setString("expectedPropertyValue", "US")),
+                                JSONObject.create()
+                                    .setString("name", "Washington, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "Washington"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", WA")
+                                                ))
+                                        ))
+                                    ),
+                                JSONObject.create()
+                                    .setString("name", "Michigan, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "Michigan"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", MI")
+                                                ))
+                                        ))
+                                    ),
+                                JSONObject.create()
+                                    .setString("name", "New York, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "New York"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", NY")
+                                                ))
+                                        ))
+                                    ),
+                                JSONObject.create()
+                                    .setString("name", "Florida, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "Florida"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", FL")
+                                                ))
+                                        ))
+                                    ),
+                                JSONObject.create()
+                                    .setString("name", "Utah, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "Utah"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", UT")
+                                                ))
+                                        ))
+                                    ),
+                                JSONObject.create()
+                                    .setString("name", "Utah County, UT, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "Utah"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", UT")
+                                                )),
+                                            JSONObject.create()
+                                                .setString("propertyName", "county")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "Utah")
+                                        ))
+                                    )
+                            )),
+                        JSON.parseObject(dataFolder.getFile("locations.json").await().getContentsAsString().await()).await());
                 });
 
                 runner.test("with actual data", runner.skip(), (Test test) ->
                 {
                     final InMemoryCharacterStream output = InMemoryCharacterStream.create();
                     final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
+                    final InMemoryFileSystem fileSystem = new InMemoryFileSystem(test.getClock());
+                    fileSystem.createRoot("/").await();
+                    final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     final Git git = Git.create(test.getProcess());
                     final Covid19GitDataSource dataSource = Covid19GitDataSource.create(test.getFileSystem().getFolder("C:/qub/qub/covid-19-java/data/").await(), git, verbose);
-                    final QubCovid19Parameters parameters = new QubCovid19Parameters(output, verbose, dataSource);
+                    final QubCovid19Parameters parameters = new QubCovid19Parameters(output, verbose, dataFolder, dataSource);
 
                     QubCovid19.run(parameters);
 
@@ -231,6 +419,188 @@ public interface QubCovid19Tests
                             "| Utah County, UT, USA |         30 |         36 |         42 |          35 |",
                             "-----------------------------------------------------------------------------"),
                         Strings.getLines(output.getText().await()));
+
+                    test.assertEqual(
+                        JSONObject.create()
+                            .setArray("locations", Iterable.create(
+                                JSONObject.create()
+                                    .setString("name", "Global")
+                                    .setNull("condition"),
+                                JSONObject.create()
+                                    .setString("name", "China")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "Or")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "China"),
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "Mainland China")))),
+                                JSONObject.create()
+                                    .setString("name", "Italy")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("propertyName", "countryOrRegion")
+                                        .setString("operator", "Equals")
+                                        .setString("expectedPropertyValue", "Italy")),
+                                JSONObject.create()
+                                    .setString("name", "South Korea")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("propertyName", "countryOrRegion")
+                                        .setString("operator", "Equals")
+                                        .setString("expectedPropertyValue", "Korea, South")),
+                                JSONObject.create()
+                                    .setString("name", "USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("propertyName", "countryOrRegion")
+                                        .setString("operator", "Equals")
+                                        .setString("expectedPropertyValue", "US")),
+                                JSONObject.create()
+                                    .setString("name", "Washington, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "Washington"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", WA")
+                                                ))
+                                        ))
+                                    ),
+                                JSONObject.create()
+                                    .setString("name", "Michigan, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "Michigan"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", MI")
+                                                ))
+                                        ))
+                                    ),
+                                JSONObject.create()
+                                    .setString("name", "New York, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "New York"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", NY")
+                                                ))
+                                        ))
+                                    ),
+                                JSONObject.create()
+                                    .setString("name", "Florida, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "Florida"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", FL")
+                                                ))
+                                        ))
+                                    ),
+                                JSONObject.create()
+                                    .setString("name", "Utah, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "Utah"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", UT")
+                                                ))
+                                        ))
+                                    ),
+                                JSONObject.create()
+                                    .setString("name", "Utah County, UT, USA")
+                                    .setObject("condition", JSONObject.create()
+                                        .setString("operator", "And")
+                                        .setArray("conditions", Iterable.create(
+                                            JSONObject.create()
+                                                .setString("propertyName", "countryOrRegion")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "US"),
+                                            JSONObject.create()
+                                                .setString("operator", "Or")
+                                                .setArray("conditions", Iterable.create(
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Equals")
+                                                        .setString("expectedPropertyValue", "Utah"),
+                                                    JSONObject.create()
+                                                        .setString("propertyName", "stateOrProvince")
+                                                        .setString("operator", "Contains")
+                                                        .setString("expectedPropertyValue", ", UT")
+                                                )),
+                                            JSONObject.create()
+                                                .setString("propertyName", "county")
+                                                .setString("operator", "Equals")
+                                                .setString("expectedPropertyValue", "Utah")
+                                        ))
+                                    )
+                            )),
+                        JSON.parseObject(dataFolder.getFile("locations.json").await().getContentsAsString().await()).await());
                 });
             });
         });
