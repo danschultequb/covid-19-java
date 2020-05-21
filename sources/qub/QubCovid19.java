@@ -69,68 +69,67 @@ public interface QubCovid19
         output.writeLine().await();
         output.writeLine().await();
 
-        final Iterable<Covid19Location> locations = Iterable.create(
-            Covid19Location.create("Global"),
-            Covid19Location.create("China")
-                .setCondition(Covid19LocationCondition.or(
-                    Covid19LocationCondition.countryOrRegionEquals("China"),
-                    Covid19LocationCondition.countryOrRegionEquals("Mainland China"))),
-            Covid19Location.create("Italy")
-                .setCondition(Covid19LocationCondition.countryOrRegionEquals("Italy")),
-            Covid19Location.create("South Korea")
-                .setCondition(Covid19LocationCondition.countryOrRegionEquals("Korea, South")),
-            Covid19Location.create("USA")
-                .setCondition(Covid19LocationCondition.countryOrRegionEquals("US")),
-            Covid19Location.create("Washington, USA")
-                .setCondition(Covid19LocationCondition.and(
-                    Covid19LocationCondition.countryOrRegionEquals("US"),
-                    Covid19LocationCondition.or(
-                        Covid19LocationCondition.stateOrProvinceEquals("Washington"),
-                        Covid19LocationCondition.stateOrProvinceContains(", WA")))),
-            Covid19Location.create("Michigan, USA")
-                .setCondition(Covid19LocationCondition.and(
-                    Covid19LocationCondition.countryOrRegionEquals("US"),
-                    Covid19LocationCondition.or(
-                        Covid19LocationCondition.stateOrProvinceEquals("Michigan"),
-                        Covid19LocationCondition.stateOrProvinceContains(", MI")))),
-            Covid19Location.create("New York, USA")
-                .setCondition(Covid19LocationCondition.and(
-                    Covid19LocationCondition.countryOrRegionEquals("US"),
-                    Covid19LocationCondition.or(
-                        Covid19LocationCondition.stateOrProvinceEquals("New York"),
-                        Covid19LocationCondition.stateOrProvinceContains(", NY")))),
-            Covid19Location.create("Florida, USA")
-                .setCondition(Covid19LocationCondition.and(
-                    Covid19LocationCondition.countryOrRegionEquals("US"),
-                    Covid19LocationCondition.or(
-                        Covid19LocationCondition.stateOrProvinceEquals("Florida"),
-                        Covid19LocationCondition.stateOrProvinceContains(", FL")))),
-            Covid19Location.create("Utah, USA")
-                .setCondition(Covid19LocationCondition.and(
-                    Covid19LocationCondition.countryOrRegionEquals("US"),
-                    Covid19LocationCondition.or(
-                        Covid19LocationCondition.stateOrProvinceEquals("Utah"),
-                        Covid19LocationCondition.stateOrProvinceContains(", UT")))),
-            Covid19Location.create("Utah County, UT, USA")
-                .setCondition(Covid19LocationCondition.and(
-                    Covid19LocationCondition.countryOrRegionEquals("US"),
-                    Covid19LocationCondition.or(
-                        Covid19LocationCondition.stateOrProvinceEquals("Utah"),
-                        Covid19LocationCondition.stateOrProvinceContains(", UT")),
-                    Covid19LocationCondition.countyEquals("Utah"))));
-
-
-        final File locationsJsonFile = dataFolder.getFile("locations.json").await();
-        if (!locationsJsonFile.exists().await())
+        final File configurationJsonFile = dataFolder.getFile("configuration.json").await();
+        QubCovid19Configuration configuration = QubCovid19Configuration.parse(configurationJsonFile).catchError().await();
+        if (configuration == null)
         {
-            try (final IndentedCharacterWriteStream locationsJsonWriteStream = IndentedCharacterWriteStream.create(locationsJsonFile.getContentCharacterWriteStream().await()))
+            configuration = QubCovid19Configuration.create()
+                .addLocations(
+                    Covid19Location.create("Global"),
+                    Covid19Location.create("China")
+                        .setCondition(Covid19LocationCondition.or(
+                            Covid19LocationCondition.countryOrRegionEquals("China"),
+                            Covid19LocationCondition.countryOrRegionEquals("Mainland China"))),
+                    Covid19Location.create("Italy")
+                        .setCondition(Covid19LocationCondition.countryOrRegionEquals("Italy")),
+                    Covid19Location.create("South Korea")
+                        .setCondition(Covid19LocationCondition.countryOrRegionEquals("Korea, South")),
+                    Covid19Location.create("USA")
+                        .setCondition(Covid19LocationCondition.countryOrRegionEquals("US")),
+                    Covid19Location.create("Washington, USA")
+                        .setCondition(Covid19LocationCondition.and(
+                            Covid19LocationCondition.countryOrRegionEquals("US"),
+                            Covid19LocationCondition.or(
+                                Covid19LocationCondition.stateOrProvinceEquals("Washington"),
+                                Covid19LocationCondition.stateOrProvinceContains(", WA")))),
+                    Covid19Location.create("Michigan, USA")
+                        .setCondition(Covid19LocationCondition.and(
+                            Covid19LocationCondition.countryOrRegionEquals("US"),
+                            Covid19LocationCondition.or(
+                                Covid19LocationCondition.stateOrProvinceEquals("Michigan"),
+                                Covid19LocationCondition.stateOrProvinceContains(", MI")))),
+                    Covid19Location.create("New York, USA")
+                        .setCondition(Covid19LocationCondition.and(
+                            Covid19LocationCondition.countryOrRegionEquals("US"),
+                            Covid19LocationCondition.or(
+                                Covid19LocationCondition.stateOrProvinceEquals("New York"),
+                                Covid19LocationCondition.stateOrProvinceContains(", NY")))),
+                    Covid19Location.create("Florida, USA")
+                        .setCondition(Covid19LocationCondition.and(
+                            Covid19LocationCondition.countryOrRegionEquals("US"),
+                            Covid19LocationCondition.or(
+                                Covid19LocationCondition.stateOrProvinceEquals("Florida"),
+                                Covid19LocationCondition.stateOrProvinceContains(", FL")))),
+                    Covid19Location.create("Utah, USA")
+                        .setCondition(Covid19LocationCondition.and(
+                            Covid19LocationCondition.countryOrRegionEquals("US"),
+                            Covid19LocationCondition.or(
+                                Covid19LocationCondition.stateOrProvinceEquals("Utah"),
+                                Covid19LocationCondition.stateOrProvinceContains(", UT")))),
+                    Covid19Location.create("Utah County, UT, USA")
+                        .setCondition(Covid19LocationCondition.and(
+                            Covid19LocationCondition.countryOrRegionEquals("US"),
+                            Covid19LocationCondition.or(
+                                Covid19LocationCondition.stateOrProvinceEquals("Utah"),
+                                Covid19LocationCondition.stateOrProvinceContains(", UT")),
+                            Covid19LocationCondition.countyEquals("Utah"))));
+            try (final CharacterWriteStream configurationJsonWriteStream = configurationJsonFile.getContentCharacterWriteStream().await())
             {
-                JSONObject.create()
-                    .setArray("locations", locations.map(Covid19Location::toJson))
-                    .toString(locationsJsonWriteStream, JSONFormat.pretty)
-                    .await();
+                configuration.toString(configurationJsonWriteStream, JSONFormat.pretty).await();
             }
         }
+
+        final Iterable<Covid19Location> locations = configuration.getLocations().await();
 
         final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
 
@@ -170,16 +169,16 @@ public interface QubCovid19
         final MutableMap<String,List<Integer>> locationDataRows = Map.create();
         for (final Covid19Location location : locations)
         {
-            locationDataRows.set(location.getName(), List.create());
+            locationDataRows.set(location.getName().await(), List.create());
         }
 
         final Covid19DailyReport reportStartDateDailyReport = dataSource.getDailyReport(reportStartDate).await();
         for (final Covid19Location location : locations)
         {
             final int confirmedCases = Integers.sum(reportStartDateDailyReport.getDataRows()
-                .where(location::matches)
+                .where((Covid19DailyReportDataRow dataRow) -> location.matches(dataRow).await())
                 .map(Covid19DailyReportDataRow::getConfirmedCases));
-            locationDataRows.get(location.getName()).await()
+            locationDataRows.get(location.getName().await()).await()
                 .add(confirmedCases);
         }
 
@@ -190,9 +189,9 @@ public interface QubCovid19
             for (final Covid19Location location : locations)
             {
                 final int confirmedCases = Integers.sum(previousDailyReport.getDataRows()
-                    .where(location::matches)
+                    .where((Covid19DailyReportDataRow dataRow) -> location.matches(dataRow).await())
                     .map(Covid19DailyReportDataRow::getConfirmedCases));
-                locationDataRows.get(location.getName()).await()
+                locationDataRows.get(location.getName().await()).await()
                     .add(confirmedCases);
             }
         }
@@ -230,15 +229,15 @@ public interface QubCovid19
         for (final Covid19Location location : locations)
         {
             final int confirmedCases = Integers.sum(dailyReport.getDataRows()
-                .where(location::matches)
+                .where((Covid19DailyReportDataRow dataRow) -> location.matches(dataRow).await())
                 .map(Covid19DailyReportDataRow::getConfirmedCases));
-            locationReportStartDateConfirmedCases.set(location.getName(), confirmedCases);
+            locationReportStartDateConfirmedCases.set(location.getName().await(), confirmedCases);
         }
 
         final MutableMap<String,List<Integer>> locationDataRows = Map.create();
         for (final Covid19Location location : locations)
         {
-            locationDataRows.set(location.getName(), List.create());
+            locationDataRows.set(location.getName().await(), List.create());
         }
 
         for (final Integer daysAgo : previousDays)
@@ -247,12 +246,12 @@ public interface QubCovid19
             final Covid19DailyReport previousDailyReport = dataSource.getDailyReport(previousDay).await();
             for (final Covid19Location location : locations)
             {
-                final int locationReportStartDateConfirmedCasesCount = locationReportStartDateConfirmedCases.get(location.getName()).await();
+                final int locationReportStartDateConfirmedCasesCount = locationReportStartDateConfirmedCases.get(location.getName().await()).await();
                 final int previousConfirmedCases = Integers.sum(previousDailyReport.getDataRows()
-                    .where(location::matches)
+                    .where((Covid19DailyReportDataRow dataRow) -> location.matches(dataRow).await())
                     .map(Covid19DailyReportDataRow::getConfirmedCases));
                 final int averageConfirmedCasesChangePerDay = (locationReportStartDateConfirmedCasesCount - previousConfirmedCases) / daysAgo;
-                locationDataRows.get(location.getName()).await()
+                locationDataRows.get(location.getName().await()).await()
                     .add(averageConfirmedCasesChangePerDay);
             }
         }

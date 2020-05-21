@@ -186,8 +186,7 @@ public interface QubCovid19Tests
                         JSONObject.create()
                             .setArray("locations", Iterable.create(
                                 JSONObject.create()
-                                    .setString("name", "Global")
-                                    .setNull("condition"),
+                                    .setString("name", "Global"),
                                 JSONObject.create()
                                     .setString("name", "China")
                                     .setObject("condition", JSONObject.create()
@@ -362,7 +361,7 @@ public interface QubCovid19Tests
                                         ))
                                     )
                             )),
-                        JSON.parseObject(dataFolder.getFile("locations.json").await().getContentsAsString().await()).await());
+                        JSON.parseObject(dataFolder.getFile("configuration.json").await().getContentsAsString().await()).await());
                 });
 
                 runner.test("with actual data", runner.skip(), (Test test) ->
@@ -600,7 +599,7 @@ public interface QubCovid19Tests
                                         ))
                                     )
                             )),
-                        JSON.parseObject(dataFolder.getFile("locations.json").await().getContentsAsString().await()).await());
+                        JSON.parseObject(dataFolder.getFile("configuration.json").await().getContentsAsString().await()).await());
                 });
             });
         });

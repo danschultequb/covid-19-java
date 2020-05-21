@@ -12,94 +12,189 @@ public class Covid19LocationPropertyCondition implements Covid19LocationConditio
         .set(Covid19DailyReportDataRow.countyPropertyName, Covid19DailyReportDataRow::getCounty)
         .set(Covid19DailyReportDataRow.confirmedCasesPropertyName, Covid19DailyReportDataRow::getConfirmedCases);
 
-    private final String propertyName;
-    private final Function1<Covid19DailyReportDataRow,Object> propertyGetter;
-    private final Object expectedPropertyValue;
-    private final Covid19LocationPropertyConditionOperator operator;
+    private final JSONObject json;
 
-    private Covid19LocationPropertyCondition(String propertyName, Covid19LocationPropertyConditionOperator operator, Object expectedPropertyValue)
+    private Covid19LocationPropertyCondition(JSONObject json)
     {
-        PreCondition.assertNotNullAndNotEmpty(propertyName, "propertyName");
-        PreCondition.assertOneOf(propertyName, Covid19LocationPropertyCondition.propertyGetters.getKeys(), "propertyName");
-        PreCondition.assertNotNull(operator, "operator");
+        PreCondition.assertNotNull(json, "json");
 
-        this.propertyName = propertyName;
-        this.propertyGetter = Covid19LocationPropertyCondition.propertyGetters.get(propertyName).await();
-        this.operator = operator;
-        this.expectedPropertyValue = expectedPropertyValue;
+        this.json = json;
+    }
+
+    public static Covid19LocationPropertyCondition create()
+    {
+        return new Covid19LocationPropertyCondition(JSONObject.create());
     }
 
     public static Covid19LocationPropertyCondition create(String propertyName, Covid19LocationPropertyConditionOperator operator, Object expectedPropertyValue)
     {
-        return new Covid19LocationPropertyCondition(propertyName, operator, expectedPropertyValue);
+        return Covid19LocationPropertyCondition.create()
+            .setPropertyName(propertyName)
+            .setOperator(operator)
+            .setExpectedPropertyValue(expectedPropertyValue);
     }
 
-    public String getPropertyName()
+    public static Result<Covid19LocationPropertyCondition> parse(JSONObject json)
     {
-        return this.propertyName;
+        PreCondition.assertNotNull(json, "json");
+
+        return Result.create(() ->
+        {
+            final Covid19LocationPropertyCondition result = new Covid19LocationPropertyCondition(json);
+            result.getPropertyName().await();
+            result.getOperator().await();
+            result.getExpectedPropertyValue().await();
+            return result;
+        });
     }
 
-    public Covid19LocationPropertyConditionOperator getOperator()
+    public Result<String> getPropertyName()
     {
-        return this.operator;
+        return this.json.getString(Covid19LocationPropertyCondition.propertyNamePropertyName);
     }
 
-    public Object getExpectedPropertyValue()
+    public Covid19LocationPropertyCondition setPropertyName(String propertyName)
     {
-        return this.expectedPropertyValue;
+        PreCondition.assertNotNullAndNotEmpty(propertyName, "propertyName");
+
+        this.json.setString(Covid19LocationPropertyCondition.propertyNamePropertyName, propertyName);
+
+        return this;
+    }
+
+    public Result<Covid19LocationPropertyConditionOperator> getOperator()
+    {
+        return this.json.getString(Covid19LocationPropertyCondition.operatorPropertyName)
+            .then((String operatorString) ->
+            {
+                return Enums.parse(Covid19LocationPropertyConditionOperator.class, operatorString).await();
+            });
+    }
+
+    public Covid19LocationPropertyCondition setOperator(Covid19LocationPropertyConditionOperator operator)
+    {
+        PreCondition.assertNotNull(operator, "operator");
+
+        this.json.setString(Covid19LocationPropertyCondition.operatorPropertyName, operator.toString());
+
+        return this;
+    }
+
+    public Result<Object> getExpectedPropertyValue()
+    {
+        return Result.create(() ->
+        {
+            Object result;
+
+            final JSONSegment expectedPropertySegment = this.json.get(Covid19LocationPropertyCondition.expectedPropertyValuePropertyName).await();
+            if (expectedPropertySegment instanceof JSONNull)
+            {
+                result = null;
+            }
+            else if (expectedPropertySegment instanceof JSONString)
+            {
+                result = ((JSONString)expectedPropertySegment).getValue();
+            }
+            else if (expectedPropertySegment instanceof JSONNumber)
+            {
+                result = ((JSONNumber)expectedPropertySegment).getValue();
+            }
+            else
+            {
+                throw new ParseException("Unexpected expected property value type: " + Types.getTypeName(expectedPropertySegment) + "(" + expectedPropertySegment.toString() + ")");
+            }
+
+            return result;
+        });
+    }
+
+    public Covid19LocationPropertyCondition setExpectedPropertyValue(Object expectedPropertyValue)
+    {
+        PreCondition.assertTrue(expectedPropertyValue == null || expectedPropertyValue instanceof Number || expectedPropertyValue instanceof String, "expectedPropertyValue == null || expectedPropertyValue instanceof Number || expectedPropertyValue instanceof String");
+
+        JSONSegment expectedPropertySegment;
+        if (expectedPropertyValue == null)
+        {
+            expectedPropertySegment = JSONNull.segment;
+        }
+        else
+        {
+            if (expectedPropertyValue instanceof Number)
+            {
+                expectedPropertySegment = JSONNumber.get(expectedPropertyValue.toString());
+            }
+            else // if (expectedPropertyValue instanceof String)
+            {
+                expectedPropertySegment = JSONString.get(expectedPropertyValue.toString());
+            }
+        }
+        this.json.set(Covid19LocationPropertyCondition.expectedPropertyValuePropertyName, expectedPropertySegment);
+
+        return this;
     }
 
     @Override
-    public boolean matches(Covid19DailyReportDataRow dataRow)
+    public Result<Boolean> matches(Covid19DailyReportDataRow dataRow)
     {
         PreCondition.assertNotNull(dataRow, "dataRow");
 
-        final Object propertyValue = this.propertyGetter.run(dataRow);
-        boolean result = Comparer.equal(propertyValue, expectedPropertyValue);
-        if (!result && expectedPropertyValue != null && propertyValue != null)
+        return Result.create(() ->
         {
+            final String propertyName = this.getPropertyName().await();
+            final Function1<Covid19DailyReportDataRow,Object> propertyGetter = Covid19LocationPropertyCondition.propertyGetters.get(propertyName).await();
+            final Covid19LocationPropertyConditionOperator operator = this.getOperator().await();
+            final Object expectedPropertyValue = this.getExpectedPropertyValue().await();
+
+            final Object propertyValue = propertyGetter.run(dataRow);
+
+            boolean result;
             if (expectedPropertyValue instanceof String)
             {
-                final String expectedPropertyValueString = ((String)expectedPropertyValue).toLowerCase();
-                final String propertyValueString = propertyValue.toString().toLowerCase();
-                if (this.operator == Covid19LocationPropertyConditionOperator.Equals)
+                final String expectedPropertyValueString = (String)expectedPropertyValue;
+                if (operator == Covid19LocationPropertyConditionOperator.Contains)
                 {
-                    result = propertyValueString.equals(expectedPropertyValueString);
+                    result = propertyValue != null && propertyValue.toString().contains(expectedPropertyValueString);
                 }
-                else if (this.operator == Covid19LocationPropertyConditionOperator.Contains)
+                else // if (operator == Covid19LocationPropertyConditionOperator.Equals)
                 {
-                    result = propertyValueString.contains(expectedPropertyValueString);
+                    result = Comparer.equal(propertyValue, expectedPropertyValue);
                 }
             }
-        }
+            else if (expectedPropertyValue instanceof Number)
+            {
+                if (operator == Covid19LocationPropertyConditionOperator.Equals)
+                {
+                    result = Comparer.equal(propertyValue, expectedPropertyValue);
+                }
+                else
+                {
+                    result = false;
+                }
+            }
+            else
+            {
+                result = (propertyValue == expectedPropertyValue);
+            }
 
-        return result;
+            return result;
+        });
     }
 
     @Override
     public JSONObject toJson()
     {
-        final JSONObject result = JSONObject.create()
-            .setString(Covid19LocationPropertyCondition.propertyNamePropertyName, this.propertyName)
-            .setString(Covid19LocationPropertyCondition.operatorPropertyName, this.operator.toString());
+        return this.json;
+    }
 
-        JSONSegment expectedPropertyValueSegment;
-        if (this.expectedPropertyValue == null)
-        {
-            expectedPropertyValueSegment = JSONNull.segment;
-        }
-        else if (this.expectedPropertyValue instanceof Number)
-        {
-            expectedPropertyValueSegment = JSONNumber.get(((Number)this.expectedPropertyValue).doubleValue());
-        }
-        else
-        {
-            expectedPropertyValueSegment = JSONString.get(this.expectedPropertyValue.toString());
-        }
-        result.set(Covid19LocationPropertyCondition.expectedPropertyValuePropertyName, expectedPropertyValueSegment);
+    @Override
+    public String toString()
+    {
+        return Covid19LocationCondition.toString(this);
+    }
 
-        PostCondition.assertNotNull(result, "result");
-
-        return result;
+    @Override
+    public boolean equals(Object rhs)
+    {
+        return Covid19LocationCondition.equals(this, rhs);
     }
 }

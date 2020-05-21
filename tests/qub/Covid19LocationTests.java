@@ -25,8 +25,8 @@ public interface Covid19LocationTests
                     {
                         final Covid19Location location = Covid19Location.create(name);
                         test.assertNotNull(location);
-                        test.assertEqual(name, location.getName());
-                        test.assertTrue(location.matches(Covid19DailyReportDataRow.create()));
+                        test.assertEqual(name, location.getName().await());
+                        test.assertTrue(location.matches(Covid19DailyReportDataRow.create()).await());
                     });
                 };
 
@@ -43,7 +43,7 @@ public interface Covid19LocationTests
                     test.assertThrows(() -> location.setCondition(null),
                         new PreConditionFailure("condition cannot be null."));
 
-                    test.assertTrue(location.matches(Covid19DailyReportDataRow.create()));
+                    test.assertTrue(location.matches(Covid19DailyReportDataRow.create()).await());
                 });
 
                 runner.test("with non-null", (Test test) ->
@@ -53,9 +53,9 @@ public interface Covid19LocationTests
                     final Covid19Location setConditionResult = location.setCondition(Covid19LocationCondition.countryOrRegionEquals("USA"));
                     test.assertSame(location, setConditionResult);
 
-                    test.assertFalse(location.matches(Covid19DailyReportDataRow.create()));
-                    test.assertFalse(location.matches(Covid19DailyReportDataRow.create().setCountryOrRegion("France")));
-                    test.assertTrue(location.matches(Covid19DailyReportDataRow.create().setCountryOrRegion("USA")));
+                    test.assertFalse(location.matches(Covid19DailyReportDataRow.create()).await());
+                    test.assertFalse(location.matches(Covid19DailyReportDataRow.create().setCountryOrRegion("France")).await());
+                    test.assertTrue(location.matches(Covid19DailyReportDataRow.create().setCountryOrRegion("USA")).await());
                 });
             });
         });
