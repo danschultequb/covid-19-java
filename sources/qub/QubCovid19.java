@@ -129,7 +129,7 @@ public interface QubCovid19
             }
         }
 
-        final Iterable<Covid19Location> locations = configuration.getLocations().await();
+        final Iterable<Covid19Location> locations = configuration.getLocations();
 
         final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
 

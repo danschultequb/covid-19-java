@@ -5,22 +5,19 @@ public class QubCovid19Configuration
     public static final String locationsPropertyName = "locations";
 
     private final JSONObject json;
+    private final List<Covid19Location> locations;
 
     private QubCovid19Configuration(JSONObject json)
     {
         PreCondition.assertNotNull(json, "json");
 
         this.json = json;
+        this.locations = List.create();
     }
 
     public static QubCovid19Configuration create()
     {
-        return QubCovid19Configuration.create(JSONObject.create());
-    }
-
-    public static QubCovid19Configuration create(JSONObject json)
-    {
-        return new QubCovid19Configuration(json);
+        return new QubCovid19Configuration(JSONObject.create());
     }
 
     public static Result<QubCovid19Configuration> parse(File file)
@@ -59,35 +56,52 @@ public class QubCovid19Configuration
         return Result.create(() ->
         {
             final JSONObject json = JSON.parseObject(characters).await();
-            return QubCovid19Configuration.create(json);
+            return QubCovid19Configuration.parse(json).await();
         });
     }
 
-    private Result<JSONArray> getLocationsArray()
+    public static Result<QubCovid19Configuration> parse(JSONObject json)
     {
-        return this.json.getArray(QubCovid19Configuration.locationsPropertyName)
-            .catchError(NotFoundException.class, () ->
-            {
-                final JSONArray locationsArray = JSONArray.create();
-                this.json.setArray(QubCovid19Configuration.locationsPropertyName, locationsArray);
-                return locationsArray;
-            });
-    }
-    public Result<Iterable<Covid19Location>> getLocations()
-    {
+        PreCondition.assertNotNull(json, "json");
         return Result.create(() ->
         {
-            return this.getLocationsArray().await()
-                .instanceOf(JSONObject.class)
-                .map((JSONObject locationJson) -> Covid19Location.parse(locationJson).await());
+            final QubCovid19Configuration result = new QubCovid19Configuration(json);
+
+            final JSONArray locationsArray = json.getArrayOrNull(QubCovid19Configuration.locationsPropertyName)
+                .catchError(NotFoundException.class)
+                .await();
+            if (locationsArray != null)
+            {
+                result.locations.addAll(locationsArray
+                    .instanceOf(JSONObject.class)
+                    .map((JSONObject locationJson) -> Covid19Location.parse(locationJson).await()));
+            }
+
+            return result;
         });
+    }
+
+    public Iterable<Covid19Location> getLocations()
+    {
+        return this.locations;
     }
 
     public QubCovid19Configuration addLocation(Covid19Location location)
     {
         PreCondition.assertNotNull(location, "location");
 
-        return this.addLocations(location);
+        JSONArray locationsJson = this.json.getArrayOrNull(QubCovid19Configuration.locationsPropertyName)
+            .catchError(NotFoundException.class)
+            .await();
+        if (locationsJson == null)
+        {
+            locationsJson = JSONArray.create();
+            this.json.setArray(QubCovid19Configuration.locationsPropertyName, locationsJson);
+        }
+        locationsJson.add(location.toJson());
+        this.locations.add(location);
+
+        return this;
     }
 
     public QubCovid19Configuration addLocations(Covid19Location... locations)
@@ -101,8 +115,10 @@ public class QubCovid19Configuration
     {
         PreCondition.assertNotNull(locations, "locations");
 
-        this.getLocationsArray().await()
-            .addAll(locations.map(Covid19Location::toJson));
+        for (final Covid19Location location : locations)
+        {
+            this.addLocation(location);
+        }
 
         return this;
     }
