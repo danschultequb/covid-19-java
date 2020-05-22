@@ -19,7 +19,8 @@ public interface QubCovid19
             .setApplicationDescription(QubCovid19.applicationDescription);
 
         actions.addAction(QubCovid19Show.actionName, QubCovid19Show::getParameters, QubCovid19Show::run)
-            .setDescription(QubCovid19Show.actionDescription);
+            .setDescription(QubCovid19Show.actionDescription)
+            .setDefaultAction();
 
         actions.addAction(QubCovid19Config.actionName, QubCovid19Config::getParameters, QubCovid19Config::run)
             .setDescription(QubCovid19Config.actionDescription);
