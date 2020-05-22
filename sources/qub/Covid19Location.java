@@ -6,6 +6,8 @@ public class Covid19Location implements JSONSegment
     public static final String conditionPropertyName = "condition";
 
     private final JSONObject json;
+    private String name;
+    private Covid19LocationCondition condition;
 
     private Covid19Location(JSONObject json)
     {
@@ -14,9 +16,17 @@ public class Covid19Location implements JSONSegment
         this.json = json;
     }
 
-    public static Covid19Location create()
+    public static Covid19Location create(String name)
     {
-        return new Covid19Location(JSONObject.create());
+        PreCondition.assertNotNullAndNotEmpty(name, "name");
+
+        final Covid19Location result = new Covid19Location(JSONObject.create())
+            .setName(name);
+
+        PostCondition.assertNotNull(result, "result");
+        PostCondition.assertEqual(name, result.getName(), "result.getName()");
+
+        return result;
     }
 
     public static Result<Covid19Location> parse(JSONObject json)
@@ -26,20 +36,22 @@ public class Covid19Location implements JSONSegment
         return Result.create(() ->
         {
             final Covid19Location result = new Covid19Location(json);
-            result.getName().await();
+            result.name = json.getString(Covid19Location.namePropertyName).await();
+            result.condition = Covid19LocationCondition.parse(
+                json.getObjectOrNull(Covid19Location.conditionPropertyName)
+                    .catchError(NotFoundException.class)
+                    .await())
+                .await();
+
+            PostCondition.assertNotNull(result, "result");
+
             return result;
         });
     }
 
-    public static Covid19Location create(String name)
+    public String getName()
     {
-        return Covid19Location.create()
-            .setName(name);
-    }
-
-    public Result<String> getName()
-    {
-        return this.json.getString(Covid19Location.namePropertyName);
+        return this.name;
     }
 
     public Covid19Location setName(String name)
@@ -47,19 +59,14 @@ public class Covid19Location implements JSONSegment
         PreCondition.assertNotNullAndNotEmpty(name, "name");
 
         this.json.setString(Covid19Location.namePropertyName, name);
+        this.name = name;
 
         return this;
     }
 
-    public Result<Covid19LocationCondition> getCondition()
+    public Covid19LocationCondition getCondition()
     {
-        return Result.create(() ->
-        {
-            final JSONObject conditionJson = this.json.getObjectOrNull(Covid19Location.conditionPropertyName)
-                .catchError(NotFoundException.class)
-                .await();
-            return conditionJson == null ? null : Covid19LocationCondition.parse(conditionJson).await();
-        });
+        return this.condition;
     }
 
     public Covid19Location setCondition(Covid19LocationCondition condition)
@@ -67,19 +74,17 @@ public class Covid19Location implements JSONSegment
         PreCondition.assertNotNull(condition, "condition");
 
         this.json.set(Covid19Location.conditionPropertyName, condition.toJson());
+        this.condition = condition;
 
         return this;
     }
 
-    public Result<Boolean> matches(Covid19DailyReportDataRow dataRow)
+    public boolean matches(Covid19DailyReportDataRow dataRow)
     {
         PreCondition.assertNotNull(dataRow, "dataRow");
 
-        return Result.create(() ->
-        {
-            final Covid19LocationCondition condition = this.getCondition().await();
-            return condition == null || condition.matches(dataRow).await();
-        });
+        final Covid19LocationCondition condition = this.getCondition();
+        return condition == null || condition.matches(dataRow);
     }
 
     @Override

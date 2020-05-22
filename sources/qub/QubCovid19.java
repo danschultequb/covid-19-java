@@ -169,16 +169,16 @@ public interface QubCovid19
         final MutableMap<String,List<Integer>> locationDataRows = Map.create();
         for (final Covid19Location location : locations)
         {
-            locationDataRows.set(location.getName().await(), List.create());
+            locationDataRows.set(location.getName(), List.create());
         }
 
         final Covid19DailyReport reportStartDateDailyReport = dataSource.getDailyReport(reportStartDate).await();
         for (final Covid19Location location : locations)
         {
             final int confirmedCases = Integers.sum(reportStartDateDailyReport.getDataRows()
-                .where((Covid19DailyReportDataRow dataRow) -> location.matches(dataRow).await())
+                .where(location::matches)
                 .map(Covid19DailyReportDataRow::getConfirmedCases));
-            locationDataRows.get(location.getName().await()).await()
+            locationDataRows.get(location.getName()).await()
                 .add(confirmedCases);
         }
 
@@ -189,9 +189,9 @@ public interface QubCovid19
             for (final Covid19Location location : locations)
             {
                 final int confirmedCases = Integers.sum(previousDailyReport.getDataRows()
-                    .where((Covid19DailyReportDataRow dataRow) -> location.matches(dataRow).await())
+                    .where(location::matches)
                     .map(Covid19DailyReportDataRow::getConfirmedCases));
-                locationDataRows.get(location.getName().await()).await()
+                locationDataRows.get(location.getName()).await()
                     .add(confirmedCases);
             }
         }
@@ -229,15 +229,15 @@ public interface QubCovid19
         for (final Covid19Location location : locations)
         {
             final int confirmedCases = Integers.sum(dailyReport.getDataRows()
-                .where((Covid19DailyReportDataRow dataRow) -> location.matches(dataRow).await())
+                .where(location::matches)
                 .map(Covid19DailyReportDataRow::getConfirmedCases));
-            locationReportStartDateConfirmedCases.set(location.getName().await(), confirmedCases);
+            locationReportStartDateConfirmedCases.set(location.getName(), confirmedCases);
         }
 
         final MutableMap<String,List<Integer>> locationDataRows = Map.create();
         for (final Covid19Location location : locations)
         {
-            locationDataRows.set(location.getName().await(), List.create());
+            locationDataRows.set(location.getName(), List.create());
         }
 
         for (final Integer daysAgo : previousDays)
@@ -246,12 +246,12 @@ public interface QubCovid19
             final Covid19DailyReport previousDailyReport = dataSource.getDailyReport(previousDay).await();
             for (final Covid19Location location : locations)
             {
-                final int locationReportStartDateConfirmedCasesCount = locationReportStartDateConfirmedCases.get(location.getName().await()).await();
+                final int locationReportStartDateConfirmedCasesCount = locationReportStartDateConfirmedCases.get(location.getName()).await();
                 final int previousConfirmedCases = Integers.sum(previousDailyReport.getDataRows()
-                    .where((Covid19DailyReportDataRow dataRow) -> location.matches(dataRow).await())
+                    .where(location::matches)
                     .map(Covid19DailyReportDataRow::getConfirmedCases));
                 final int averageConfirmedCasesChangePerDay = (locationReportStartDateConfirmedCasesCount - previousConfirmedCases) / daysAgo;
-                locationDataRows.get(location.getName().await()).await()
+                locationDataRows.get(location.getName()).await()
                     .add(averageConfirmedCasesChangePerDay);
             }
         }

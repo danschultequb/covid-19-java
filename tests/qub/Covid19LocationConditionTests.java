@@ -12,8 +12,8 @@ public interface Covid19LocationConditionTests
                 {
                     final Covid19LocationGroupCondition groupCondition = Covid19LocationCondition.and();
                     test.assertNotNull(groupCondition);
-                    test.assertEqual(Covid19LocationGroupConditionOperator.And, groupCondition.getOperator().await());
-                    test.assertEqual(Iterable.create(), groupCondition.getConditions().await());
+                    test.assertEqual(Covid19LocationGroupConditionOperator.And, groupCondition.getOperator());
+                    test.assertEqual(Iterable.create(), groupCondition.getConditions());
                 });
 
                 runner.test("with one condition", (Test test) ->
@@ -21,8 +21,8 @@ public interface Covid19LocationConditionTests
                     final Covid19LocationCondition condition = Covid19LocationCondition.countyEquals("spam");
                     final Covid19LocationGroupCondition groupCondition = Covid19LocationCondition.and(condition);
                     test.assertNotNull(groupCondition);
-                    test.assertEqual(Covid19LocationGroupConditionOperator.And, groupCondition.getOperator().await());
-                    test.assertEqual(Iterable.create(condition), groupCondition.getConditions().await());
+                    test.assertEqual(Covid19LocationGroupConditionOperator.And, groupCondition.getOperator());
+                    test.assertEqual(Iterable.create(condition), groupCondition.getConditions());
                 });
 
                 runner.test("with two conditions", (Test test) ->
@@ -31,8 +31,8 @@ public interface Covid19LocationConditionTests
                     final Covid19LocationCondition condition2 = Covid19LocationCondition.countryOrRegionContains("stuff");
                     final Covid19LocationGroupCondition groupCondition = Covid19LocationCondition.and(condition1, condition2);
                     test.assertNotNull(groupCondition);
-                    test.assertEqual(Covid19LocationGroupConditionOperator.And, groupCondition.getOperator().await());
-                    test.assertEqual(Iterable.create(condition1, condition2), groupCondition.getConditions().await());
+                    test.assertEqual(Covid19LocationGroupConditionOperator.And, groupCondition.getOperator());
+                    test.assertEqual(Iterable.create(condition1, condition2), groupCondition.getConditions());
                 });
 
                 runner.test("with null array", (Test test) ->
@@ -54,8 +54,8 @@ public interface Covid19LocationConditionTests
                 {
                     final Covid19LocationGroupCondition groupCondition = Covid19LocationCondition.or();
                     test.assertNotNull(groupCondition);
-                    test.assertEqual(Covid19LocationGroupConditionOperator.Or, groupCondition.getOperator().await());
-                    test.assertEqual(Iterable.create(), groupCondition.getConditions().await());
+                    test.assertEqual(Covid19LocationGroupConditionOperator.Or, groupCondition.getOperator());
+                    test.assertEqual(Iterable.create(), groupCondition.getConditions());
                 });
 
                 runner.test("with one condition", (Test test) ->
@@ -63,8 +63,8 @@ public interface Covid19LocationConditionTests
                     final Covid19LocationCondition condition = Covid19LocationCondition.countyEquals("spam");
                     final Covid19LocationGroupCondition groupCondition = Covid19LocationCondition.or(condition);
                     test.assertNotNull(groupCondition);
-                    test.assertEqual(Covid19LocationGroupConditionOperator.Or, groupCondition.getOperator().await());
-                    test.assertEqual(Iterable.create(condition), groupCondition.getConditions().await());
+                    test.assertEqual(Covid19LocationGroupConditionOperator.Or, groupCondition.getOperator());
+                    test.assertEqual(Iterable.create(condition), groupCondition.getConditions());
                 });
 
                 runner.test("with two conditions", (Test test) ->
@@ -73,8 +73,8 @@ public interface Covid19LocationConditionTests
                     final Covid19LocationCondition condition2 = Covid19LocationCondition.countryOrRegionContains("stuff");
                     final Covid19LocationGroupCondition groupCondition = Covid19LocationCondition.or(condition1, condition2);
                     test.assertNotNull(groupCondition);
-                    test.assertEqual(Covid19LocationGroupConditionOperator.Or, groupCondition.getOperator().await());
-                    test.assertEqual(Iterable.create(condition1, condition2), groupCondition.getConditions().await());
+                    test.assertEqual(Covid19LocationGroupConditionOperator.Or, groupCondition.getOperator());
+                    test.assertEqual(Iterable.create(condition1, condition2), groupCondition.getConditions());
                 });
 
                 runner.test("with null array", (Test test) ->
@@ -98,9 +98,9 @@ public interface Covid19LocationConditionTests
                     {
                         final Covid19LocationPropertyCondition propertyCondition = Covid19LocationCondition.countryOrRegionEquals(expectedPropertyValue);
                         test.assertNotNull(propertyCondition);
-                        test.assertEqual(Covid19DailyReportDataRow.countryOrRegionPropertyName, propertyCondition.getPropertyName().await());
-                        test.assertEqual(Covid19LocationPropertyConditionOperator.Equals, propertyCondition.getOperator().await());
-                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue().await());
+                        test.assertEqual(Covid19DailyReportDataRow.countryOrRegionPropertyName, propertyCondition.getPropertyName());
+                        test.assertEqual(Covid19LocationPropertyConditionOperator.Equals, propertyCondition.getOperator());
+                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue());
                     });
                 };
 
@@ -117,9 +117,9 @@ public interface Covid19LocationConditionTests
                     {
                         final Covid19LocationPropertyCondition propertyCondition = Covid19LocationCondition.countryOrRegionContains(expectedPropertyValue);
                         test.assertNotNull(propertyCondition);
-                        test.assertEqual(Covid19DailyReportDataRow.countryOrRegionPropertyName, propertyCondition.getPropertyName().await());
-                        test.assertEqual(Covid19LocationPropertyConditionOperator.Contains, propertyCondition.getOperator().await());
-                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue().await());
+                        test.assertEqual(Covid19DailyReportDataRow.countryOrRegionPropertyName, propertyCondition.getPropertyName());
+                        test.assertEqual(Covid19LocationPropertyConditionOperator.Contains, propertyCondition.getOperator());
+                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue());
                     });
                 };
 
@@ -136,9 +136,9 @@ public interface Covid19LocationConditionTests
                     {
                         final Covid19LocationPropertyCondition propertyCondition = Covid19LocationCondition.stateOrProvinceEquals(expectedPropertyValue);
                         test.assertNotNull(propertyCondition);
-                        test.assertEqual(Covid19DailyReportDataRow.stateOrProvincePropertyName, propertyCondition.getPropertyName().await());
-                        test.assertEqual(Covid19LocationPropertyConditionOperator.Equals, propertyCondition.getOperator().await());
-                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue().await());
+                        test.assertEqual(Covid19DailyReportDataRow.stateOrProvincePropertyName, propertyCondition.getPropertyName());
+                        test.assertEqual(Covid19LocationPropertyConditionOperator.Equals, propertyCondition.getOperator());
+                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue());
                     });
                 };
 
@@ -155,9 +155,9 @@ public interface Covid19LocationConditionTests
                     {
                         final Covid19LocationPropertyCondition propertyCondition = Covid19LocationCondition.stateOrProvinceContains(expectedPropertyValue);
                         test.assertNotNull(propertyCondition);
-                        test.assertEqual(Covid19DailyReportDataRow.stateOrProvincePropertyName, propertyCondition.getPropertyName().await());
-                        test.assertEqual(Covid19LocationPropertyConditionOperator.Contains, propertyCondition.getOperator().await());
-                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue().await());
+                        test.assertEqual(Covid19DailyReportDataRow.stateOrProvincePropertyName, propertyCondition.getPropertyName());
+                        test.assertEqual(Covid19LocationPropertyConditionOperator.Contains, propertyCondition.getOperator());
+                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue());
                     });
                 };
 
@@ -174,9 +174,9 @@ public interface Covid19LocationConditionTests
                     {
                         final Covid19LocationPropertyCondition propertyCondition = Covid19LocationCondition.countyEquals(expectedPropertyValue);
                         test.assertNotNull(propertyCondition);
-                        test.assertEqual(Covid19DailyReportDataRow.countyPropertyName, propertyCondition.getPropertyName().await());
-                        test.assertEqual(Covid19LocationPropertyConditionOperator.Equals, propertyCondition.getOperator().await());
-                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue().await());
+                        test.assertEqual(Covid19DailyReportDataRow.countyPropertyName, propertyCondition.getPropertyName());
+                        test.assertEqual(Covid19LocationPropertyConditionOperator.Equals, propertyCondition.getOperator());
+                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue());
                     });
                 };
 
@@ -193,9 +193,9 @@ public interface Covid19LocationConditionTests
                     {
                         final Covid19LocationPropertyCondition propertyCondition = Covid19LocationCondition.countyContains(expectedPropertyValue);
                         test.assertNotNull(propertyCondition);
-                        test.assertEqual(Covid19DailyReportDataRow.countyPropertyName, propertyCondition.getPropertyName().await());
-                        test.assertEqual(Covid19LocationPropertyConditionOperator.Contains, propertyCondition.getOperator().await());
-                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue().await());
+                        test.assertEqual(Covid19DailyReportDataRow.countyPropertyName, propertyCondition.getPropertyName());
+                        test.assertEqual(Covid19LocationPropertyConditionOperator.Contains, propertyCondition.getOperator());
+                        test.assertEqual(expectedPropertyValue, propertyCondition.getExpectedPropertyValue());
                     });
                 };
 

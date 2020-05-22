@@ -10,7 +10,7 @@ public interface Covid19LocationCondition
      * @param dataRow The data row.
      * @return Whether or not the provided Covid19DailyReportDataRow applies to a Covid19Location.
      */
-    Result<Boolean> matches(Covid19DailyReportDataRow dataRow);
+    boolean matches(Covid19DailyReportDataRow dataRow);
 
     /**
      * Convert this location condition to its JSON representation.
@@ -71,23 +71,23 @@ public interface Covid19LocationCondition
      */
     static Result<Covid19LocationCondition> parse(JSONObject json)
     {
-        PreCondition.assertNotNull(json, "json");
-
         return Result.create(() ->
         {
-            Covid19LocationCondition result = Covid19LocationPropertyCondition.parse(json).catchError().await();
-            if (result == null)
+            Covid19LocationCondition result = null;
+            if (json != null)
             {
-                result = Covid19LocationGroupCondition.parse(json).catchError().await();
+                result = Covid19LocationPropertyCondition.parse(json).catchError().await();
+
+                if (result == null)
+                {
+                    result = Covid19LocationGroupCondition.parse(json).catchError().await();
+                }
+
+                if (result == null)
+                {
+                    throw new ParseException("Unrecognized Covid19LocationCondition: " + json.toString());
+                }
             }
-
-            if (result == null)
-            {
-                throw new ParseException("Unrecognized Covid19LocationCondition: " + json.toString());
-            }
-
-            PostCondition.assertNotNull(result, "result");
-
             return result;
         });
     }

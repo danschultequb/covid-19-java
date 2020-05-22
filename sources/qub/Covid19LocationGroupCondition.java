@@ -6,22 +6,20 @@ public class Covid19LocationGroupCondition implements Covid19LocationCondition
     public static final String conditionsPropertyName = "conditions";
 
     private final JSONObject json;
+    private Covid19LocationGroupConditionOperator operator;
+    private final List<Covid19LocationCondition> conditions;
 
     private Covid19LocationGroupCondition(JSONObject json)
     {
         PreCondition.assertNotNull(json, "json");
 
         this.json = json;
-    }
-
-    public static Covid19LocationGroupCondition create()
-    {
-        return new Covid19LocationGroupCondition(JSONObject.create());
+        this.conditions = List.create();
     }
 
     public static Covid19LocationGroupCondition create(Covid19LocationGroupConditionOperator operator, Covid19LocationGroupCondition... conditions)
     {
-        return Covid19LocationGroupCondition.create()
+        return new Covid19LocationGroupCondition(JSONObject.create())
             .setOperator(operator)
             .addConditions(conditions);
     }
@@ -33,8 +31,21 @@ public class Covid19LocationGroupCondition implements Covid19LocationCondition
         return Result.create(() ->
         {
             final Covid19LocationGroupCondition result = new Covid19LocationGroupCondition(json);
-            result.getOperator().await();
-            result.getConditions().await();
+
+            final String operatorString = json.getString(Covid19LocationGroupCondition.operatorPropertyName).await();
+            result.operator = Enums.parse(Covid19LocationGroupConditionOperator.class, operatorString).await();
+
+            final JSONArray conditionsArray = json.getArrayOrNull(Covid19LocationGroupCondition.conditionsPropertyName)
+                .catchError(NotFoundException.class)
+                .await();
+            if (conditionsArray != null)
+            {
+                result.conditions.addAll(conditionsArray
+                    .instanceOf(JSONObject.class)
+                    .map((JSONObject conditionJsonObject) -> Covid19LocationCondition.parse(conditionJsonObject).await())
+                    .toList());
+            }
+
             return result;
         });
     }
@@ -43,13 +54,9 @@ public class Covid19LocationGroupCondition implements Covid19LocationCondition
      * Get the operator that this condition will use when combining the group's results.
      * @return The operator that this condition will use when combining the group's results.
      */
-    public Result<Covid19LocationGroupConditionOperator> getOperator()
+    public Covid19LocationGroupConditionOperator getOperator()
     {
-        return Result.create(() ->
-        {
-            final String operatorString = this.json.getString(Covid19LocationGroupCondition.operatorPropertyName).await();
-            return Enums.parse(Covid19LocationGroupConditionOperator.class, operatorString).await();
-        });
+        return this.operator;
     }
 
     public Covid19LocationGroupCondition setOperator(Covid19LocationGroupConditionOperator operator)
@@ -57,19 +64,9 @@ public class Covid19LocationGroupCondition implements Covid19LocationCondition
         PreCondition.assertNotNull(operator, "operator");
 
         this.json.setString(Covid19LocationGroupCondition.operatorPropertyName, operator.toString());
+        this.operator = operator;
 
         return this;
-    }
-
-    private Result<JSONArray> getConditionsArray()
-    {
-        return this.json.getArray(Covid19LocationGroupCondition.conditionsPropertyName)
-            .catchError(NotFoundException.class, () ->
-            {
-                final JSONArray newConditionsArray = JSONArray.create();
-                this.json.setArray(Covid19LocationGroupCondition.conditionsPropertyName, newConditionsArray);
-                return newConditionsArray;
-            });
     }
 
     /**
@@ -78,24 +75,26 @@ public class Covid19LocationGroupCondition implements Covid19LocationCondition
      * @return The conditions whose matches() results will be combined using this group condition's
      * operator.
      */
-    public Result<Iterable<Covid19LocationCondition>> getConditions()
+    public Iterable<Covid19LocationCondition> getConditions()
     {
-        return Result.create(() ->
-        {
-            final JSONArray conditionsArray = this.getConditionsArray().await();
-            return conditionsArray
-                .instanceOf(JSONObject.class)
-                .map((JSONObject conditionJsonObject) -> Covid19LocationCondition.parse(conditionJsonObject).await())
-                .toList();
-        });
+        return this.conditions;
     }
 
     public Covid19LocationGroupCondition addCondition(Covid19LocationCondition condition)
     {
         PreCondition.assertNotNull(condition, "condition");
 
-        this.getConditionsArray().await()
-            .add(condition.toJson());
+        JSONArray conditionsArray = this.json.getArrayOrNull(Covid19LocationGroupCondition.conditionsPropertyName)
+            .catchError(NotFoundException.class)
+            .await();
+        if (conditionsArray == null)
+        {
+            conditionsArray = JSONArray.create();
+            this.json.setArray(Covid19LocationGroupCondition.conditionsPropertyName, conditionsArray);
+        }
+
+        conditionsArray.add(condition.toJson());
+        this.conditions.add(condition);
 
         return this;
     }
@@ -120,26 +119,23 @@ public class Covid19LocationGroupCondition implements Covid19LocationCondition
     }
 
     @Override
-    public Result<Boolean> matches(Covid19DailyReportDataRow dataRow)
+    public boolean matches(Covid19DailyReportDataRow dataRow)
     {
         PreCondition.assertNotNull(dataRow, "dataRow");
 
-        return Result.create(() ->
+        boolean result = (this.getOperator() == Covid19LocationGroupConditionOperator.And);
+        final boolean startState = result;
+
+        for (final Covid19LocationCondition condition : this.getConditions())
         {
-            boolean result = (this.getOperator().await() == Covid19LocationGroupConditionOperator.And);
-            final boolean startState = result;
-
-            for (final Covid19LocationCondition condition : this.getConditions().await())
+            result = condition.matches(dataRow);
+            if (result != startState)
             {
-                result = condition.matches(dataRow).await();
-                if (result != startState)
-                {
-                    break;
-                }
+                break;
             }
+        }
 
-            return result;
-        });
+        return result;
     }
 
     @Override
