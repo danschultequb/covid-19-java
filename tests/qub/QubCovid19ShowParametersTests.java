@@ -1,10 +1,10 @@
 package qub;
 
-public interface QubCovid19ParametersTests
+public interface QubCovid19ShowParametersTests
 {
     static void test(TestRunner runner)
     {
-        runner.testGroup(QubCovid19Parameters.class, () ->
+        runner.testGroup(QubCovid19ShowParameters.class, () ->
         {
             runner.testGroup("constructor()", () ->
             {
@@ -16,7 +16,7 @@ public interface QubCovid19ParametersTests
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     final Covid19DataSource dataSource = Covid19InMemoryDataSource.create();
 
-                    test.assertThrows(() -> new QubCovid19Parameters(output, verbose, dataFolder, dataSource),
+                    test.assertThrows(() -> new QubCovid19ShowParameters(output, verbose, dataFolder, dataSource),
                         new PreConditionFailure("output cannot be null."));
                 });
 
@@ -28,7 +28,7 @@ public interface QubCovid19ParametersTests
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     final Covid19DataSource dataSource = null;
 
-                    test.assertThrows(() -> new QubCovid19Parameters(output, verbose, dataFolder, dataSource),
+                    test.assertThrows(() -> new QubCovid19ShowParameters(output, verbose, dataFolder, dataSource),
                         new PreConditionFailure("dataSource cannot be null."));
                 });
 
@@ -40,7 +40,7 @@ public interface QubCovid19ParametersTests
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     final Covid19DataSource dataSource = Covid19InMemoryDataSource.create();
 
-                    final QubCovid19Parameters parameters = new QubCovid19Parameters(output, verbose, dataFolder, dataSource);
+                    final QubCovid19ShowParameters parameters = new QubCovid19ShowParameters(output, verbose, dataFolder, dataSource);
                     test.assertSame(output, parameters.getOutput());
                     test.assertSame(dataSource, parameters.getDataSource());
                 });

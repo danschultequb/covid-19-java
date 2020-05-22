@@ -1,9 +1,9 @@
 package qub;
 
 /**
- * Application parameters for the qub/covid-19 CLI application.
+ * Parameters for the "show" action in the qub/covid-19 CLI application.
  */
-public class QubCovid19Parameters
+public class QubCovid19ShowParameters
 {
     private final CharacterWriteStream output;
     private final VerboseCharacterWriteStream verbose;
@@ -15,7 +15,7 @@ public class QubCovid19Parameters
      * @param output The output stream of the application.
      * @param dataSource The source of data about the Covid-19 pandemic.
      */
-    public QubCovid19Parameters(CharacterWriteStream output, VerboseCharacterWriteStream verbose, Folder dataFolder, Covid19DataSource dataSource)
+    public QubCovid19ShowParameters(CharacterWriteStream output, VerboseCharacterWriteStream verbose, Folder dataFolder, Covid19DataSource dataSource)
     {
         PreCondition.assertNotNull(output, "output");
         PreCondition.assertNotNull(verbose, "verbose");
