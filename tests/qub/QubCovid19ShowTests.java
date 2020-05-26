@@ -176,7 +176,7 @@ public interface QubCovid19ShowTests
                         JSON.parseObject(dataFolder.getFile("configuration.json").await().getContentsAsString().await()).await());
                 });
 
-                runner.test("with actual data", runner.skip(false), (Test test) ->
+                runner.test("with actual data", runner.skip(), (Test test) ->
                 {
                     final InMemoryCharacterStream output = InMemoryCharacterStream.create();
                     final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
