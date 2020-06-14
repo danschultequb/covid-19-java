@@ -30,6 +30,12 @@ public interface QubCovid19Config
         final Folder dataFolder = parameters.getDataFolder();
         final DefaultApplicationLauncher defaultApplicationLauncher = parameters.getDefaultApplicationLauncher();
 
+        final File configurationSchemaJsonFile = QubCovid19.getConfigurationSchemaFile(dataFolder);
+        try (final CharacterWriteStream configurationSchemaJsonWriteStream = configurationSchemaJsonFile.getContentCharacterWriteStream().await())
+        {
+            QubCovid19.getDefaultConfigurationSchema().toString(configurationSchemaJsonWriteStream, JSONFormat.pretty).await();
+        }
+
         final File configurationJsonFile = QubCovid19.getConfigurationFile(dataFolder);
         if (!configurationJsonFile.exists().await())
         {

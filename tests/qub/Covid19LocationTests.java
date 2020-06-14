@@ -33,31 +33,6 @@ public interface Covid19LocationTests
                 createTest.run("a");
                 createTest.run("ball");
             });
-
-            runner.testGroup("setCondition(Covid19LocationCondition)", () ->
-            {
-                runner.test("with null", (Test test) ->
-                {
-                    final Covid19Location location = Covid19Location.create("hello");
-
-                    test.assertThrows(() -> location.setCondition(null),
-                        new PreConditionFailure("condition cannot be null."));
-
-                    test.assertTrue(location.matches(Covid19DailyReportDataRow.create()));
-                });
-
-                runner.test("with non-null", (Test test) ->
-                {
-                    final Covid19Location location = Covid19Location.create("hello");
-
-                    final Covid19Location setConditionResult = location.setCondition(Covid19LocationCondition.countryOrRegionEquals("USA"));
-                    test.assertSame(location, setConditionResult);
-
-                    test.assertFalse(location.matches(Covid19DailyReportDataRow.create()));
-                    test.assertFalse(location.matches(Covid19DailyReportDataRow.create().setCountryOrRegion("France")));
-                    test.assertTrue(location.matches(Covid19DailyReportDataRow.create().setCountryOrRegion("USA")));
-                });
-            });
         });
     }
 }

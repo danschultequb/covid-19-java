@@ -74,7 +74,7 @@ public interface Covid19LocationCondition
         return Result.create(() ->
         {
             Covid19LocationCondition result = null;
-            if (json != null)
+            if (json != null && json.getProperties().any())
             {
                 result = Covid19LocationPropertyCondition.parse(json).catchError().await();
 

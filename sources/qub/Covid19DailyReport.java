@@ -87,7 +87,7 @@ public class Covid19DailyReport
     public static Result<Covid19DailyReport> parse(ByteReadStream byteReadStream)
     {
         PreCondition.assertNotNull(byteReadStream, "byteReadStream");
-        PreCondition.assertNotDisposed(byteReadStream, "byteReadStream.isDisposed()");
+        PreCondition.assertNotDisposed(byteReadStream, "byteReadStream");
 
         return Result.create(() ->
         {

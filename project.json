@@ -1,7 +1,7 @@
 {
   "publisher": "qub",
   "project": "covid-19-java",
-  "version": "24",
+  "version": "27",
   "java": {
     "mainClass": "qub.QubCovid19",
     "shortcutName": "qub-covid-19",
@@ -9,22 +9,22 @@
       {
         "publisher": "qub",
         "project": "csv-java",
-        "version": "19"
+        "version": "20"
       },
       {
         "publisher": "qub",
         "project": "charactertable-java",
-        "version": "25"
+        "version": "26"
       },
       {
         "publisher": "qub",
         "project": "git-java",
-        "version": "13"
+        "version": "14"
       },
       {
         "publisher": "qub",
-        "project": "json-java",
-        "version": "44"
+        "project": "jsonschema-java",
+        "version": "3"
       }
     ]
   }

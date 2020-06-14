@@ -68,8 +68,7 @@ public interface QubCovid19ShowTests
                     dataFolder.setFileContentsAsString("configuration.json",
                         Covid19Configuration.create()
                             .addLocation(Covid19Location.create("Global"))
-                            .addLocation(Covid19Location.create("USA")
-                                .setCondition(Covid19LocationCondition.countryOrRegionEquals("US")))
+                            .addLocation(Covid19Location.create("USA", Covid19LocationCondition.countryOrRegionEquals("US")))
                             .toString()).await();
                     final Covid19InMemoryDataSource dataSource = Covid19InMemoryDataSource.create()
                         .setDailyReport(DateTime.create(2020, 3, 7),
@@ -163,16 +162,14 @@ public interface QubCovid19ShowTests
 
                     test.assertEqual(
                         JSONObject.create()
-                            .setArray("locations", Iterable.create(
-                                JSONObject.create()
-                                    .setString("name", "Global"),
-                                JSONObject.create()
-                                    .setString("name", "USA")
-                                    .setObject("condition", JSONObject.create()
-                                        .setString("propertyName", "countryOrRegion")
-                                        .setString("operator", "Equals")
-                                        .setString("expectedPropertyValue", "US"))
-                            )),
+                            .setObject("locations", JSONObject.create()
+                                .setObject("Global", JSONObject.create())
+                                .setObject("USA", JSONObject.create()
+                                    .setString("propertyName", "countryOrRegion")
+                                    .setString("operator", "Equals")
+                                    .setString("expectedPropertyValue", "US")
+                                )
+                            ),
                         JSON.parseObject(dataFolder.getFile("configuration.json").await().getContentsAsString().await()).await());
                 });
 
@@ -186,8 +183,7 @@ public interface QubCovid19ShowTests
                     dataFolder.setFileContentsAsString("configuration.json",
                         Covid19Configuration.create()
                             .addLocation(Covid19Location.create("Global"))
-                            .addLocation(Covid19Location.create("USA")
-                                .setCondition(Covid19LocationCondition.countryOrRegionEquals("US")))
+                            .addLocation(Covid19Location.create("USA", Covid19LocationCondition.countryOrRegionEquals("US")))
                             .toString()).await();
                     final Git git = Git.create(test.getProcess());
                     final Covid19GitDataSource dataSource = Covid19GitDataSource.create(test.getFileSystem().getFolder("C:/qub/qub/covid-19-java/data/").await(), git, verbose);

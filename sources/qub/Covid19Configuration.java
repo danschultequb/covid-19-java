@@ -67,14 +67,13 @@ public class Covid19Configuration
         {
             final Covid19Configuration result = new Covid19Configuration(json);
 
-            final JSONArray locationsArray = json.getArrayOrNull(Covid19Configuration.locationsPropertyName)
+            final JSONObject locationsObject = json.getObjectOrNull(Covid19Configuration.locationsPropertyName)
                 .catchError(NotFoundException.class)
                 .await();
-            if (locationsArray != null)
+            if (locationsObject != null)
             {
-                result.locations.addAll(locationsArray
-                    .instanceOf(JSONObject.class)
-                    .map((JSONObject locationJson) -> Covid19Location.parse(locationJson).await()));
+                result.locations.addAll(locationsObject.getProperties()
+                    .map((JSONProperty locationJson) -> Covid19Location.parse(locationJson).await()));
             }
 
             return result;
@@ -90,15 +89,15 @@ public class Covid19Configuration
     {
         PreCondition.assertNotNull(location, "location");
 
-        JSONArray locationsJson = this.json.getArrayOrNull(Covid19Configuration.locationsPropertyName)
+        JSONObject locationsJson = this.json.getObjectOrNull(Covid19Configuration.locationsPropertyName)
             .catchError(NotFoundException.class)
             .await();
         if (locationsJson == null)
         {
-            locationsJson = JSONArray.create();
-            this.json.setArray(Covid19Configuration.locationsPropertyName, locationsJson);
+            locationsJson = JSONObject.create();
+            this.json.setObject(Covid19Configuration.locationsPropertyName, locationsJson);
         }
-        locationsJson.add(location.toJson());
+        locationsJson.set(location.toJson());
         this.locations.add(location);
 
         return this;
