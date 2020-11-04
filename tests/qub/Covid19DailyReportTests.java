@@ -150,7 +150,7 @@ public interface Covid19DailyReportTests
             {
                 runner.test("with null", (Test test) ->
                 {
-                    test.assertThrows(() -> Covid19DailyReport.parse((CSVDocument)null),
+                    test.assertThrows(() -> Covid19DailyReport.parse((CSVDocument)null, Path.parse("/fake/folder/"), issue -> {}),
                         new PreConditionFailure("csvDocument cannot be null."));
                 });
 
@@ -158,7 +158,7 @@ public interface Covid19DailyReportTests
                 {
                     runner.test(testName, (Test test) ->
                     {
-                        final Covid19DailyReport dailyReport = Covid19DailyReport.parse(csvDocument).await();
+                        final Covid19DailyReport dailyReport = Covid19DailyReport.parse(csvDocument, Path.parse("/fake/folder/"), issue -> {}).await();
                         test.assertNotNull(dailyReport);
                         test.assertEqual(expectedDataRows, dailyReport.getDataRows());
                     });
@@ -322,11 +322,11 @@ public interface Covid19DailyReportTests
                             .setCountryOrRegion("fake-country")));
             });
 
-            runner.testGroup("parse(ByteReadStream)", () ->
+            runner.testGroup("parse(ByteReadStream,Path,Action1<Covid19Issue>)", () ->
             {
                 runner.test("with null", (Test test) ->
                 {
-                    test.assertThrows(() -> Covid19DailyReport.parse((ByteReadStream)null),
+                    test.assertThrows(() -> Covid19DailyReport.parse((ByteReadStream)null, Path.parse("/fake/folder/"), issue -> {}),
                         new PreConditionFailure("byteReadStream cannot be null."));
                 });
 
@@ -334,7 +334,7 @@ public interface Covid19DailyReportTests
                 {
                     final ByteReadStream byteStream = ByteReadStream.create();
                     byteStream.dispose().await();
-                    test.assertThrows(() -> Covid19DailyReport.parse(byteStream).await(),
+                    test.assertThrows(() -> Covid19DailyReport.parse(byteStream, Path.parse("/fake/folder/"), issue -> {}).await(),
                         new PreConditionFailure("byteReadStream.isDisposed() cannot be true."));
                 });
 
@@ -342,7 +342,7 @@ public interface Covid19DailyReportTests
                 {
                     runner.test(testName, (Test test) ->
                     {
-                        final Covid19DailyReport dailyReport = Covid19DailyReport.parse(csvDocument).await();
+                        final Covid19DailyReport dailyReport = Covid19DailyReport.parse(csvDocument, Path.parse("/fake/folder/"), issue -> {}).await();
                         test.assertNotNull(dailyReport);
                         test.assertEqual(expectedDataRows, dailyReport.getDataRows());
                     });

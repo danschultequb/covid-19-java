@@ -14,24 +14,28 @@ public interface QubCovid19Config
         final CommandLineParameters parameters = process.createCommandLineParameters()
             .setApplicationName(QubCovid19.getActionFullName(QubCovid19Config.actionName))
             .setApplicationDescription(QubCovid19Config.actionDescription);
+        final CommandLineParameterHelp help = parameters.addHelp();
 
-        final CharacterWriteStream output = process.getOutputWriteStream();
-        final Folder projectDataFolder = process.getQubProjectDataFolder().await();
-        final DefaultApplicationLauncher defaultApplicationLauncher = process.getDefaultApplicationLauncher();
+        if (!help.showApplicationHelpLines(process).await())
+        {
+            final Folder projectDataFolder = process.getQubProjectDataFolder().await();
+            final DefaultApplicationLauncher defaultApplicationLauncher = process.getDefaultApplicationLauncher();
 
-        return new QubCovid19ConfigParameters(output, projectDataFolder, defaultApplicationLauncher);
+            result = new QubCovid19ConfigParameters(projectDataFolder, defaultApplicationLauncher);
+        }
+
+        return result;
     }
 
     static void run(QubCovid19ConfigParameters parameters)
     {
         PreCondition.assertNotNull(parameters, "parameters");
 
-        final CharacterWriteStream output = parameters.getOutput();
         final Folder dataFolder = parameters.getDataFolder();
         final DefaultApplicationLauncher defaultApplicationLauncher = parameters.getDefaultApplicationLauncher();
 
         final File configurationSchemaJsonFile = QubCovid19.getConfigurationSchemaFile(dataFolder);
-        try (final CharacterWriteStream configurationSchemaJsonWriteStream = configurationSchemaJsonFile.getContentCharacterWriteStream().await())
+        try (final CharacterWriteStream configurationSchemaJsonWriteStream = configurationSchemaJsonFile.getContentsCharacterWriteStream().await())
         {
             QubCovid19.getDefaultConfigurationSchema().toString(configurationSchemaJsonWriteStream, JSONFormat.pretty).await();
         }
@@ -39,7 +43,7 @@ public interface QubCovid19Config
         final File configurationJsonFile = QubCovid19.getConfigurationFile(dataFolder);
         if (!configurationJsonFile.exists().await())
         {
-            try (final CharacterWriteStream configurationJsonWriteStream = configurationJsonFile.getContentCharacterWriteStream().await())
+            try (final CharacterWriteStream configurationJsonWriteStream = configurationJsonFile.getContentsCharacterWriteStream().await())
             {
                 QubCovid19.getDefaultConfiguration().toString(configurationJsonWriteStream, JSONFormat.pretty).await();
             }

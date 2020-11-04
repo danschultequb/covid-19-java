@@ -40,8 +40,8 @@ public interface QubCovid19ShowTests
                             Iterable.create(
                                 "Usage: qub-covid-19 show [--profiler] [--help] [--verbose]",
                                 "  Report the current state of the COVID-19 virus in the configured locations.",
-                                "  --profiler: Whether or not this application should pause before it is run to allow a profiler to be attached.",
-                                "  --help(?): Show the help message for this application.",
+                                "  --profiler:   Whether or not this application should pause before it is run to allow a profiler to be attached.",
+                                "  --help(?):    Show the help message for this application.",
                                 "  --verbose(v): Whether or not to show verbose logs."
                             ),
                             Strings.getLines(output.getText().await()));
@@ -157,7 +157,8 @@ public interface QubCovid19ShowTests
                             "| Location | 1 days ago | 3 days ago | 7 days ago | 30 days ago |",
                             "| Global   |      78080 |      28629 |      12381 |        2891 |",
                             "| USA      |         92 |         33 |         14 |           3 |",
-                            "-----------------------------------------------------------------"),
+                            "-----------------------------------------------------------------",
+                            ""),
                         Strings.getLines(output.getText().await()));
 
                     test.assertEqual(

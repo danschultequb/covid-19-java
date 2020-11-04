@@ -27,7 +27,7 @@ public class Covid19Configuration
         return Result.create(() ->
         {
             Covid19Configuration result;
-            try (final ByteReadStream byteReadStream = BufferedByteReadStream.create(file.getContentReadStream().await()))
+            try (final ByteReadStream byteReadStream = BufferedByteReadStream.create(file.getContentsReadStream().await()))
             {
                 result = Covid19Configuration.parse(byteReadStream).await();
             }

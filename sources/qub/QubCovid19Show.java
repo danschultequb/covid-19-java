@@ -1,5 +1,7 @@
 package qub;
 
+import java.util.Objects;
+
 public interface QubCovid19Show
 {
     String actionName = "show";
@@ -47,7 +49,8 @@ public interface QubCovid19Show
         output.writeLine(" Done.").await();
         output.writeLine().await();
 
-        final Covid19Summary summary = dataSource.getDataSummary().await();
+        final Set<Covid19Issue> issues = Set.create();
+        final Covid19Summary summary = dataSource.getDataSummary(issues::add).await();
         final DateTime mostRecentDateReported = summary.getMostRecentDateReported();
         final CharacterTableFormat summaryFormat = CharacterTableFormat.create()
             .setNewLine('\n')
@@ -69,7 +72,7 @@ public interface QubCovid19Show
         if (configuration == null)
         {
             configuration = QubCovid19.getDefaultConfiguration();
-            try (final CharacterWriteStream configurationJsonWriteStream = configurationJsonFile.getContentCharacterWriteStream().await())
+            try (final CharacterWriteStream configurationJsonWriteStream = configurationJsonFile.getContentsCharacterWriteStream().await())
             {
                 configuration.toString(configurationJsonWriteStream, JSONFormat.pretty).await();
             }
@@ -94,23 +97,40 @@ public interface QubCovid19Show
         }
 
         output.writeLine("Confirmed Cases:").await();
-        final CharacterTable confirmedCasesTable = QubCovid19Show.createConfirmedCasesTable(mostRecentDateReported, previousDays, locations, dataSource);
+        final CharacterTable confirmedCasesTable = QubCovid19Show.createConfirmedCasesTable(mostRecentDateReported, previousDays, locations, dataSource, issues::add);
         confirmedCasesTable.toString(output, confirmedCasesFormat).await();
         output.writeLine().await();
         output.writeLine().await();
 
         output.writeLine("Confirmed Cases Average Change Per Day:").await();
-        final CharacterTable confirmedCasesAverageChangePerDayTable = QubCovid19Show.createConfirmedCasesAverageChangePerDayTable(mostRecentDateReported, previousDays, locations, dataSource);
+        final CharacterTable confirmedCasesAverageChangePerDayTable = QubCovid19Show.createConfirmedCasesAverageChangePerDayTable(mostRecentDateReported, previousDays, locations, dataSource, issues::add);
         confirmedCasesAverageChangePerDayTable.toString(output, confirmedCasesFormat).await();
+        output.writeLine().await();
+
+        if (issues.any())
+        {
+            output.writeLine().await();
+
+            output.writeLine("Issues:").await();
+            int issueNumber = 0;
+            for (final Covid19Issue issue : issues)
+            {
+                ++issueNumber;
+
+                output.writeLine(issueNumber + ". " + issue.getMessage()).await();
+            }
+        }
+
         output.writeLine().await();
     }
 
-    static CharacterTable createConfirmedCasesTable(DateTime reportStartDate, Iterable<Integer> previousDays, Iterable<Covid19Location> locations, Covid19DataSource dataSource)
+    static CharacterTable createConfirmedCasesTable(DateTime reportStartDate, Iterable<Integer> previousDays, Iterable<Covid19Location> locations, Covid19DataSource dataSource, Action1<Covid19Issue> onIssue)
     {
         PreCondition.assertNotNull(reportStartDate, "reportStartDate");
         PreCondition.assertNotNull(previousDays, "previousDays");
         PreCondition.assertNotNull(locations, "locations");
         PreCondition.assertNotNull(dataSource, "dataSource");
+        PreCondition.assertNotNull(onIssue, "onIssue");
 
         final MutableMap<String,List<Integer>> locationDataRows = Map.create();
         for (final Covid19Location location : locations)
@@ -118,12 +138,13 @@ public interface QubCovid19Show
             locationDataRows.set(location.getName(), List.create());
         }
 
-        final Covid19DailyReport reportStartDateDailyReport = dataSource.getDailyReport(reportStartDate).await();
+        final Covid19DailyReport reportStartDateDailyReport = dataSource.getDailyReport(reportStartDate, onIssue).await();
         for (final Covid19Location location : locations)
         {
             final int confirmedCases = Integers.sum(reportStartDateDailyReport.getDataRows()
                 .where(location::matches)
-                .map(Covid19DailyReportDataRow::getConfirmedCases));
+                .map(Covid19DailyReportDataRow::getConfirmedCases)
+                .where(Objects::nonNull));
             locationDataRows.get(location.getName()).await()
                 .add(confirmedCases);
         }
@@ -131,12 +152,13 @@ public interface QubCovid19Show
         for (final Integer daysAgo : previousDays)
         {
             final DateTime previousDay = reportStartDate.minus(Duration.days(daysAgo));
-            final Covid19DailyReport previousDailyReport = dataSource.getDailyReport(previousDay).await();
+            final Covid19DailyReport previousDailyReport = dataSource.getDailyReport(previousDay, onIssue).await();
             for (final Covid19Location location : locations)
             {
                 final int confirmedCases = Integers.sum(previousDailyReport.getDataRows()
                     .where(location::matches)
-                    .map(Covid19DailyReportDataRow::getConfirmedCases));
+                    .map(Covid19DailyReportDataRow::getConfirmedCases)
+                    .where(Objects::nonNull));
                 locationDataRows.get(location.getName()).await()
                     .add(confirmedCases);
             }
@@ -163,20 +185,22 @@ public interface QubCovid19Show
         return result;
     }
 
-    static CharacterTable createConfirmedCasesAverageChangePerDayTable(DateTime reportStartDate, Iterable<Integer> previousDays, Iterable<Covid19Location> locations, Covid19DataSource dataSource)
+    static CharacterTable createConfirmedCasesAverageChangePerDayTable(DateTime reportStartDate, Iterable<Integer> previousDays, Iterable<Covid19Location> locations, Covid19DataSource dataSource, Action1<Covid19Issue> onIssue)
     {
         PreCondition.assertNotNull(reportStartDate, "reportStartDate");
         PreCondition.assertNotNull(previousDays, "previousDays");
         PreCondition.assertNotNull(locations, "locations");
         PreCondition.assertNotNull(dataSource, "dataSource");
+        PreCondition.assertNotNull(onIssue, "onIssue");
 
         final MutableMap<String,Integer> locationReportStartDateConfirmedCases = Map.create();
-        final Covid19DailyReport dailyReport = dataSource.getDailyReport(reportStartDate).await();
+        final Covid19DailyReport dailyReport = dataSource.getDailyReport(reportStartDate, onIssue).await();
         for (final Covid19Location location : locations)
         {
             final int confirmedCases = Integers.sum(dailyReport.getDataRows()
                 .where(location::matches)
-                .map(Covid19DailyReportDataRow::getConfirmedCases));
+                .map(Covid19DailyReportDataRow::getConfirmedCases)
+                .where(Objects::nonNull));
             locationReportStartDateConfirmedCases.set(location.getName(), confirmedCases);
         }
 
@@ -189,7 +213,7 @@ public interface QubCovid19Show
         for (final Integer daysAgo : previousDays)
         {
             final DateTime previousDay = reportStartDate.minus(Duration.days(daysAgo));
-            final Covid19DailyReport previousDailyReport = dataSource.getDailyReport(previousDay).await();
+            final Covid19DailyReport previousDailyReport = dataSource.getDailyReport(previousDay, onIssue).await();
             for (final Covid19Location location : locations)
             {
                 final int locationReportStartDateConfirmedCasesCount = locationReportStartDateConfirmedCases.get(location.getName()).await();

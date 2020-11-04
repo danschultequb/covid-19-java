@@ -15,12 +15,12 @@ public interface Covid19DataSource
      * Get the basic details of the covid-19 data set.
      * @return The basic details of the covid-19 data set.
      */
-    Result<Covid19Summary> getDataSummary();
+    Result<Covid19Summary> getDataSummary(Action1<Covid19Issue> onIssue);
 
     /**
      * Get the daily report for the provided date.
      * @param date The date to get the daily report for.
      * @return The daily report for the provided date.
      */
-    Result<Covid19DailyReport> getDailyReport(DateTime date);
+    Result<Covid19DailyReport> getDailyReport(DateTime date, Action1<Covid19Issue> onIssue);
 }

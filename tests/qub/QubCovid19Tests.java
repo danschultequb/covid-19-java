@@ -37,10 +37,10 @@ public interface QubCovid19Tests
                                 "Usage: qub-covid-19 [--action=]<action-name> [--help]",
                                 "  Used to gather, consolidate, and report data about the COVID-19 virus.",
                                 "  --action(a): The name of the action to invoke.",
-                                "  --help(?): Show the help message for this application.",
+                                "  --help(?):   Show the help message for this application.",
                                 "",
                                 "Actions:",
-                                "  config: Open the configuration file for this application.",
+                                "  config:         Open the configuration file for this application.",
                                 "  show (default): Report the current state of the COVID-19 virus in the configured locations."),
                             Strings.getLines(output.getText().await()));
                     }
@@ -57,13 +57,15 @@ public interface QubCovid19Tests
 
                         test.assertEqual(
                             Iterable.create(
+                                "Unrecognized action: \"spam\"",
+                                "",
                                 "Usage: qub-covid-19 [--action=]<action-name> [--help]",
                                 "  Used to gather, consolidate, and report data about the COVID-19 virus.",
                                 "  --action(a): The name of the action to invoke.",
-                                "  --help(?): Show the help message for this application.",
+                                "  --help(?):   Show the help message for this application.",
                                 "",
                                 "Actions:",
-                                "  config: Open the configuration file for this application.",
+                                "  config:         Open the configuration file for this application.",
                                 "  show (default): Report the current state of the COVID-19 virus in the configured locations."),
                             Strings.getLines(output.getText().await()));
                     }

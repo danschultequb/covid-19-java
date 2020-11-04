@@ -28,9 +28,11 @@ public class Covid19DailyReport
         return Covid19DailyReport.create(Iterable.create(dataRows));
     }
 
-    public static Result<Covid19DailyReport> parse(CSVDocument csvDocument)
+    public static Result<Covid19DailyReport> parse(CSVDocument csvDocument, Path filePath, Action1<Covid19Issue> onIssue)
     {
         PreCondition.assertNotNull(csvDocument, "csvDocument");
+        PreCondition.assertNotNull(filePath, "filePath");
+        PreCondition.assertNotNull(onIssue, "onIssue");
 
         return Result.create(() ->
         {
@@ -61,11 +63,33 @@ public class Covid19DailyReport
                         dataRow.setCountryOrRegion(countryOrRegion);
                     }
 
-                    final Integer confirmedCases = columnMapping.getConfirmedCases(csvRow).catchError().await();
-                    if (confirmedCases != null && confirmedCases >= 0)
-                    {
-                        dataRow.setConfirmedCases(confirmedCases);
-                    }
+                    columnMapping.getConfirmedCases(csvRow)
+                        .then(dataRow::setConfirmedCases)
+                        .catchError((Throwable error) ->
+                        {
+                            final CharacterList message = CharacterList.create();
+
+                            message.addAll(error.getMessage());
+
+                            final List<String> additionalDetails = List.create();
+                            additionalDetails.add("file path: " + Strings.escapeAndQuote(filePath));
+
+                            if (!Strings.isNullOrEmpty(countryOrRegion))
+                            {
+                                additionalDetails.add("country or region: " + Strings.escapeAndQuote(countryOrRegion));
+                            }
+
+                            if (!Strings.isNullOrEmpty(stateOrProvince))
+                            {
+                                additionalDetails.add("state or province: " + Strings.escapeAndQuote(stateOrProvince));
+                            }
+
+                            message.add(' ');
+                            message.addAll(Iterable.toString(additionalDetails, '(', ')'));
+
+                            onIssue.run(Covid19Issue.create(message.toString(true)).setFilePath(filePath));
+                        })
+                        .await();
 
                     dataRows.add(dataRow);
                 }
@@ -75,24 +99,27 @@ public class Covid19DailyReport
         });
     }
 
-    public static Result<Covid19DailyReport> parse(File file)
+    public static Result<Covid19DailyReport> parse(File file, Action1<Covid19Issue> onIssue)
     {
         PreCondition.assertNotNull(file, "file");
+        PreCondition.assertNotNull(onIssue, "onIssue");
 
         return Result.createUsing(
-            () -> ByteReadStream.buffer(file.getContentReadStream().await()),
-            (ByteReadStream byteReadStream) -> Covid19DailyReport.parse(byteReadStream).await());
+            () -> ByteReadStream.buffer(file.getContentsReadStream().await()),
+            (ByteReadStream byteReadStream) -> Covid19DailyReport.parse(byteReadStream, file.getPath(), onIssue).await());
     }
 
-    public static Result<Covid19DailyReport> parse(ByteReadStream byteReadStream)
+    public static Result<Covid19DailyReport> parse(ByteReadStream byteReadStream, Path filePath, Action1<Covid19Issue> onIssue)
     {
         PreCondition.assertNotNull(byteReadStream, "byteReadStream");
         PreCondition.assertNotDisposed(byteReadStream, "byteReadStream");
+        PreCondition.assertNotNull(filePath, "filePath");
+        PreCondition.assertNotNull(onIssue, "onIssue");
 
         return Result.create(() ->
         {
             final CSVDocument csvDocument = CSV.parse(byteReadStream).await();
-            return Covid19DailyReport.parse(csvDocument).await();
+            return Covid19DailyReport.parse(csvDocument, filePath, onIssue).await();
         });
     }
 

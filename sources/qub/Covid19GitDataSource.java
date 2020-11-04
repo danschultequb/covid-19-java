@@ -48,8 +48,10 @@ public class Covid19GitDataSource implements Covid19DataSource
     }
 
     @Override
-    public Result<Covid19Summary> getDataSummary()
+    public Result<Covid19Summary> getDataSummary(Action1<Covid19Issue> onIssue)
     {
+        PreCondition.assertNotNull(onIssue, "onIssue");
+
         return Result.create(() ->
         {
             final Covid19Summary result = Covid19Summary.create();
@@ -60,7 +62,7 @@ public class Covid19GitDataSource implements Covid19DataSource
             final File mostRecentDailyReportFile = Covid19GitDataSource.getMostRecentDailyReportFile(dailyReportFiles);
             result.setMostRecentDateReported(Covid19GitDataSource.parseDailyReportFileDate(mostRecentDailyReportFile).await());
 
-            final Covid19DailyReport mostRecentDailyReport = Covid19DailyReport.parse(mostRecentDailyReportFile).await();
+            final Covid19DailyReport mostRecentDailyReport = Covid19DailyReport.parse(mostRecentDailyReportFile, onIssue).await();
             result.setCountriesReportedCount(mostRecentDailyReport.getDataRows()
                 .map(Covid19DailyReportDataRow::getCountryOrRegion)
                 .toSet()
@@ -126,9 +128,10 @@ public class Covid19GitDataSource implements Covid19DataSource
     }
 
     @Override
-    public Result<Covid19DailyReport> getDailyReport(DateTime date)
+    public Result<Covid19DailyReport> getDailyReport(DateTime date, Action1<Covid19Issue> onIssue)
     {
         PreCondition.assertNotNull(date, "date");
+        PreCondition.assertNotNull(onIssue, "onIssue");
 
         return Result.create(() ->
         {
@@ -139,7 +142,7 @@ public class Covid19GitDataSource implements Covid19DataSource
             {
                 throw new NotFoundException("No daily report found for the date " + QubCovid19.toString(onlyDate) + ".");
             }
-            final Covid19DailyReport result = Covid19DailyReport.parse(dailyReportFile).await();
+            final Covid19DailyReport result = Covid19DailyReport.parse(dailyReportFile, onIssue).await();
 
             PostCondition.assertNotNull(result, "result");
 

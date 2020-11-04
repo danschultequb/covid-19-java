@@ -38,8 +38,10 @@ public class Covid19InMemoryDataSource implements Covid19DataSource
     }
 
     @Override
-    public Result<Covid19Summary> getDataSummary()
+    public Result<Covid19Summary> getDataSummary(Action1<Covid19Issue> onIssue)
     {
+        PreCondition.assertNotNull(onIssue, "onIssue");
+
         return Result.create(() ->
         {
             final Iterable<DateTime> datesReported = this.dailyReports.getKeys();
@@ -65,9 +67,10 @@ public class Covid19InMemoryDataSource implements Covid19DataSource
     }
 
     @Override
-    public Result<Covid19DailyReport> getDailyReport(DateTime date)
+    public Result<Covid19DailyReport> getDailyReport(DateTime date, Action1<Covid19Issue> onIssue)
     {
         PreCondition.assertNotNull(date, "date");
+        PreCondition.assertNotNull(onIssue, "onIssue");
 
         final DateTime onlyDate = DateTime.create(date.getYear(), date.getMonth(), date.getDayOfMonth());
         return this.dailyReports.get(onlyDate)
