@@ -219,7 +219,8 @@ public interface QubCovid19Show
                 final int locationReportStartDateConfirmedCasesCount = locationReportStartDateConfirmedCases.get(location.getName()).await();
                 final int previousConfirmedCases = Integers.sum(previousDailyReport.getDataRows()
                     .where(location::matches)
-                    .map(Covid19DailyReportDataRow::getConfirmedCases));
+                    .map(Covid19DailyReportDataRow::getConfirmedCases)
+                    .where(Objects::nonNull));
                 final int averageConfirmedCasesChangePerDay = (locationReportStartDateConfirmedCasesCount - previousConfirmedCases) / daysAgo;
                 locationDataRows.get(location.getName()).await()
                     .add(averageConfirmedCasesChangePerDay);
