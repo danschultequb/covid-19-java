@@ -25,6 +25,8 @@ public interface QubCovid19
         actions.addAction(QubCovid19Config.actionName, QubCovid19Config::getParameters, QubCovid19Config::run)
             .setDescription(QubCovid19Config.actionDescription);
 
+        CommandLineLogsAction.add(actions);
+
         actions.run(process);
     }
 

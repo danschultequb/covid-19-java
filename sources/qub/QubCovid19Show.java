@@ -29,7 +29,7 @@ public interface QubCovid19Show
 
             final Folder projectDataFolder = process.getQubProjectDataFolder().await();
             final Git git = Git.create(process);
-            final Covid19DataSource dataSource = Covid19GitDataSource.create(projectDataFolder, git, verbose);
+            final Covid19DataSource dataSource = Covid19GitDataSource.create(projectDataFolder, git);
             result = new QubCovid19ShowParameters(output, verbose, projectDataFolder, dataSource);
         }
 
@@ -40,88 +40,93 @@ public interface QubCovid19Show
     {
         PreCondition.assertNotNull(parameters, "parameters");
 
-        final IndentedCharacterWriteStream output = IndentedCharacterWriteStream.create(parameters.getOutput());
         final Folder dataFolder = parameters.getDataFolder();
+        final LogCharacterWriteStreams logStreams = CommandLineLogsAction.addLogStream(dataFolder, parameters.getOutput(), parameters.getVerbose());
+        final IndentedCharacterWriteStream output = IndentedCharacterWriteStream.create(logStreams.getCombinedStream(0));
+        final CharacterWriteStream verbose = logStreams.getCombinedStream(1);
         final Covid19DataSource dataSource = parameters.getDataSource();
 
-        output.write("Refreshing data...").await();
-        dataSource.refreshData().await();
-        output.writeLine(" Done.").await();
-        output.writeLine().await();
-
-        final Set<Covid19Issue> issues = Set.create();
-        final Covid19Summary summary = dataSource.getDataSummary(issues::add).await();
-        final DateTime mostRecentDateReported = summary.getMostRecentDateReported();
-        final CharacterTableFormat summaryFormat = CharacterTableFormat.create()
-            .setNewLine('\n')
-            .setColumnSeparator(' ')
-            .setColumnHorizontalAlignment(1, HorizontalAlignment.Right);
-        output.writeLine("Summary:").await();
-        CharacterTable.create()
-            .addRow("Dates reported:", Integers.toString(summary.getDatesReportedCount()))
-            .addRow("Countries reported:", Integers.toString(summary.getCountriesReportedCount()))
-            .addRow("Most recent report:", QubCovid19.toString(mostRecentDateReported))
-            .toString(output, summaryFormat).await();
-        output.writeLine().await();
-        output.writeLine().await();
-
-        final File configurationJsonFile = QubCovid19.getConfigurationFile(dataFolder);
-        Covid19Configuration configuration = Covid19Configuration.parse(configurationJsonFile)
-            .catchError(FileNotFoundException.class)
-            .await();
-        if (configuration == null)
+        try (final Disposable logStream = logStreams.getLogStream())
         {
-            configuration = QubCovid19.getDefaultConfiguration();
-            try (final CharacterWriteStream configurationJsonWriteStream = configurationJsonFile.getContentsCharacterWriteStream().await())
-            {
-                configuration.toString(configurationJsonWriteStream, JSONFormat.pretty).await();
-            }
-        }
-
-        final Iterable<Covid19Location> locations = configuration.getLocations();
-
-        final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
-
-        final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
-            .setNewLine('\n')
-            .setTopBorder('-')
-            .setLeftBorder("| ")
-            .setColumnSeparator(" | ")
-            .setRightBorder(" |")
-            .setBottomBorder('-');
-
-        final int previousDaysCount = previousDays.getCount();
-        for (int i = 0; i < previousDaysCount + 1; ++i)
-        {
-            confirmedCasesFormat.setColumnHorizontalAlignment(i + 1, HorizontalAlignment.Right);
-        }
-
-        output.writeLine("Confirmed Cases:").await();
-        final CharacterTable confirmedCasesTable = QubCovid19Show.createConfirmedCasesTable(mostRecentDateReported, previousDays, locations, dataSource, issues::add);
-        confirmedCasesTable.toString(output, confirmedCasesFormat).await();
-        output.writeLine().await();
-        output.writeLine().await();
-
-        output.writeLine("Confirmed Cases Average Change Per Day:").await();
-        final CharacterTable confirmedCasesAverageChangePerDayTable = QubCovid19Show.createConfirmedCasesAverageChangePerDayTable(mostRecentDateReported, previousDays, locations, dataSource, issues::add);
-        confirmedCasesAverageChangePerDayTable.toString(output, confirmedCasesFormat).await();
-        output.writeLine().await();
-
-        if (issues.any())
-        {
+            output.write("Refreshing data...").await();
+            dataSource.refreshData(verbose).await();
+            output.writeLine(" Done.").await();
             output.writeLine().await();
 
-            output.writeLine("Issues:").await();
-            int issueNumber = 0;
-            for (final Covid19Issue issue : issues)
+            final Set<Covid19Issue> issues = Set.create();
+            final Covid19Summary summary = dataSource.getDataSummary(issues::add).await();
+            final DateTime mostRecentDateReported = summary.getMostRecentDateReported();
+            final CharacterTableFormat summaryFormat = CharacterTableFormat.create()
+                .setNewLine('\n')
+                .setColumnSeparator(' ')
+                .setColumnHorizontalAlignment(1, HorizontalAlignment.Right);
+            output.writeLine("Summary:").await();
+            CharacterTable.create()
+                .addRow("Dates reported:", Integers.toString(summary.getDatesReportedCount()))
+                .addRow("Countries reported:", Integers.toString(summary.getCountriesReportedCount()))
+                .addRow("Most recent report:", QubCovid19.toString(mostRecentDateReported))
+                .toString(output, summaryFormat).await();
+            output.writeLine().await();
+            output.writeLine().await();
+
+            final File configurationJsonFile = QubCovid19.getConfigurationFile(dataFolder);
+            Covid19Configuration configuration = Covid19Configuration.parse(configurationJsonFile)
+                .catchError(FileNotFoundException.class)
+                .await();
+            if (configuration == null)
             {
-                ++issueNumber;
-
-                output.writeLine(issueNumber + ". " + issue.getMessage()).await();
+                configuration = QubCovid19.getDefaultConfiguration();
+                try (final CharacterWriteStream configurationJsonWriteStream = configurationJsonFile.getContentsCharacterWriteStream().await())
+                {
+                    configuration.toString(configurationJsonWriteStream, JSONFormat.pretty).await();
+                }
             }
-        }
 
-        output.writeLine().await();
+            final Iterable<Covid19Location> locations = configuration.getLocations();
+
+            final Iterable<Integer> previousDays = Iterable.create(1, 3, 7, 30);
+
+            final CharacterTableFormat confirmedCasesFormat = CharacterTableFormat.create()
+                .setNewLine('\n')
+                .setTopBorder('-')
+                .setLeftBorder("| ")
+                .setColumnSeparator(" | ")
+                .setRightBorder(" |")
+                .setBottomBorder('-');
+
+            final int previousDaysCount = previousDays.getCount();
+            for (int i = 0; i < previousDaysCount + 1; ++i)
+            {
+                confirmedCasesFormat.setColumnHorizontalAlignment(i + 1, HorizontalAlignment.Right);
+            }
+
+            output.writeLine("Confirmed Cases:").await();
+            final CharacterTable confirmedCasesTable = QubCovid19Show.createConfirmedCasesTable(mostRecentDateReported, previousDays, locations, dataSource, issues::add);
+            confirmedCasesTable.toString(output, confirmedCasesFormat).await();
+            output.writeLine().await();
+            output.writeLine().await();
+
+            output.writeLine("Confirmed Cases Average Change Per Day:").await();
+            final CharacterTable confirmedCasesAverageChangePerDayTable = QubCovid19Show.createConfirmedCasesAverageChangePerDayTable(mostRecentDateReported, previousDays, locations, dataSource, issues::add);
+            confirmedCasesAverageChangePerDayTable.toString(output, confirmedCasesFormat).await();
+            output.writeLine().await();
+
+            if (issues.any())
+            {
+                output.writeLine().await();
+
+                output.writeLine("Issues:").await();
+                int issueNumber = 0;
+                for (final Covid19Issue issue : issues)
+                {
+                    ++issueNumber;
+
+                    output.writeLine(issueNumber + ". " + issue.getMessage()).await();
+                }
+            }
+
+            output.writeLine().await();
+        }
     }
 
     static CharacterTable createConfirmedCasesTable(DateTime reportStartDate, Iterable<Integer> previousDays, Iterable<Covid19Location> locations, Covid19DataSource dataSource, Action1<Covid19Issue> onIssue)

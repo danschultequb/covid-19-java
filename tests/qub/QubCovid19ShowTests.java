@@ -62,7 +62,7 @@ public interface QubCovid19ShowTests
                 {
                     final InMemoryCharacterToByteStream output = InMemoryCharacterToByteStream.create();
                     final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
-                    final InMemoryFileSystem fileSystem = new InMemoryFileSystem(test.getClock());
+                    final InMemoryFileSystem fileSystem = InMemoryFileSystem.create(test.getClock());
                     fileSystem.createRoot("/").await();
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     dataFolder.setFileContentsAsString("configuration.json",
@@ -178,7 +178,7 @@ public interface QubCovid19ShowTests
                 {
                     final InMemoryCharacterStream output = InMemoryCharacterStream.create();
                     final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
-                    final InMemoryFileSystem fileSystem = new InMemoryFileSystem(test.getClock());
+                    final InMemoryFileSystem fileSystem = InMemoryFileSystem.create(test.getClock());
                     fileSystem.createRoot("/").await();
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     dataFolder.setFileContentsAsString("configuration.json",
@@ -187,7 +187,7 @@ public interface QubCovid19ShowTests
                             .addLocation(Covid19Location.create("USA", Covid19LocationCondition.countryOrRegionEquals("US")))
                             .toString()).await();
                     final Git git = Git.create(test.getProcess());
-                    final Covid19GitDataSource dataSource = Covid19GitDataSource.create(test.getFileSystem().getFolder("C:/qub/qub/covid-19-java/data/").await(), git, verbose);
+                    final Covid19GitDataSource dataSource = Covid19GitDataSource.create(test.getFileSystem().getFolder("C:/qub/qub/covid-19-java/data/").await(), git);
                     final QubCovid19ShowParameters parameters = new QubCovid19ShowParameters(output, verbose, dataFolder, dataSource);
 
                     QubCovid19Show.run(parameters);

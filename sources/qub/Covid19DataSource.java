@@ -9,7 +9,7 @@ public interface Covid19DataSource
      * Get the latest data about the Covid-19 pandemic.
      * @return The result of refreshing the data.
      */
-    Result<Void> refreshData();
+    Result<Void> refreshData(CharacterWriteStream verbose);
 
     /**
      * Get the basic details of the covid-19 data set.

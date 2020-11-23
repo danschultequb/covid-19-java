@@ -12,7 +12,7 @@ public interface QubCovid19ShowParametersTests
                 {
                     final CharacterWriteStream output = null;
                     final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, InMemoryCharacterStream.create());
-                    final InMemoryFileSystem fileSystem = new InMemoryFileSystem(test.getClock());
+                    final InMemoryFileSystem fileSystem = InMemoryFileSystem.create(test.getClock());
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     final Covid19DataSource dataSource = Covid19InMemoryDataSource.create();
 
@@ -24,7 +24,7 @@ public interface QubCovid19ShowParametersTests
                 {
                     final CharacterWriteStream output = InMemoryCharacterStream.create();
                     final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
-                    final InMemoryFileSystem fileSystem = new InMemoryFileSystem(test.getClock());
+                    final InMemoryFileSystem fileSystem = InMemoryFileSystem.create(test.getClock());
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     final Covid19DataSource dataSource = null;
 
@@ -36,7 +36,7 @@ public interface QubCovid19ShowParametersTests
                 {
                     final CharacterWriteStream output = InMemoryCharacterStream.create();
                     final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
-                    final InMemoryFileSystem fileSystem = new InMemoryFileSystem(test.getClock());
+                    final InMemoryFileSystem fileSystem = InMemoryFileSystem.create(test.getClock());
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     final Covid19DataSource dataSource = Covid19InMemoryDataSource.create();
 

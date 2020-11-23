@@ -7,42 +7,47 @@ public class Covid19GitDataSource implements Covid19DataSource
 
     private final Git git;
     private final Folder gitRepositoryFolder;
-    private final CharacterWriteStream verbose;
 
-    private Covid19GitDataSource(Folder projectDataFolder, Git git, CharacterWriteStream verbose)
+    private Covid19GitDataSource(Folder projectDataFolder, Git git)
     {
         PreCondition.assertNotNull(projectDataFolder, "projectDataFolder");
         PreCondition.assertNotNull(git, "git");
-        PreCondition.assertNotNull(verbose, "verbose");
 
         this.git = git;
         this.gitRepositoryFolder = projectDataFolder.getFolder(Covid19GitDataSource.gitRepositoryName).await();
-        this.verbose = verbose;
     }
 
-    public static Covid19GitDataSource create(Folder projectDataFolder, Git git, CharacterWriteStream verbose)
+    public static Covid19GitDataSource create(Folder projectDataFolder, Git git)
     {
-        return new Covid19GitDataSource(projectDataFolder, git, verbose);
+        return new Covid19GitDataSource(projectDataFolder, git);
     }
 
     @Override
-    public Result<Void> refreshData()
+    public Result<Void> refreshData(CharacterWriteStream verbose)
     {
+        PreCondition.assertNotNull(verbose, "verbose");
+
         return Result.create(() ->
         {
             if (this.gitRepositoryFolder.exists().await())
             {
                 this.git.getPullProcessBuilder().await()
                     .setWorkingFolder(this.gitRepositoryFolder)
-                    .setVerbose(this.verbose)
-                    .run().await();
+                    .setVerbose(verbose)
+                    .redirectOutputLines((String outputLine) -> verbose.writeLine(outputLine).await())
+                    .redirectErrorLines((String errorLine) -> verbose.writeLine(errorLine).await())
+                    .run()
+                    .await();
             }
             else
             {
                 this.git.getCloneProcessBuilder(Covid19GitDataSource.githubRepositoryUrl).await()
                     .setDirectory(this.gitRepositoryFolder)
-                    .setVerbose(this.verbose)
-                    .run().await();
+                    .setVerbose(verbose)
+                    .redirectOutputLines((String outputLine) -> verbose.writeLine(outputLine).await())
+                    .redirectErrorLines((String errorLine) -> verbose.writeLine(errorLine).await())
+                    .run()
+                    .await();
             }
         });
     }

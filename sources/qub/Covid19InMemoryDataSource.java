@@ -32,8 +32,10 @@ public class Covid19InMemoryDataSource implements Covid19DataSource
     }
 
     @Override
-    public Result<Void> refreshData()
+    public Result<Void> refreshData(CharacterWriteStream verbose)
     {
+        PreCondition.assertNotNull(verbose, "verbose");
+
         return Result.success();
     }
 

@@ -41,6 +41,7 @@ public interface QubCovid19Tests
                                 "",
                                 "Actions:",
                                 "  config:         Open the configuration file for this application.",
+                                "  logs:           Show the logs folder.",
                                 "  show (default): Report the current state of the COVID-19 virus in the configured locations."),
                             Strings.getLines(output.getText().await()));
                     }
@@ -66,6 +67,7 @@ public interface QubCovid19Tests
                                 "",
                                 "Actions:",
                                 "  config:         Open the configuration file for this application.",
+                                "  logs:           Show the logs folder.",
                                 "  show (default): Report the current state of the COVID-19 virus in the configured locations."),
                             Strings.getLines(output.getText().await()));
                     }
