@@ -10,8 +10,9 @@ public interface QubCovid19ShowParametersTests
             {
                 runner.test("with null output", (Test test) ->
                 {
-                    final CharacterWriteStream output = null;
-                    final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, InMemoryCharacterStream.create());
+                    final CharacterToByteWriteStream output = null;
+                    final VerboseCharacterToByteWriteStream verbose = VerboseCharacterToByteWriteStream.create(InMemoryCharacterToByteStream.create())
+                        .setIsVerbose(false);
                     final InMemoryFileSystem fileSystem = InMemoryFileSystem.create(test.getClock());
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     final Covid19DataSource dataSource = Covid19InMemoryDataSource.create();
@@ -22,8 +23,9 @@ public interface QubCovid19ShowParametersTests
 
                 runner.test("with null dataSource", (Test test) ->
                 {
-                    final CharacterWriteStream output = InMemoryCharacterStream.create();
-                    final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
+                    final CharacterToByteWriteStream output = InMemoryCharacterToByteStream.create();
+                    final VerboseCharacterToByteWriteStream verbose = VerboseCharacterToByteWriteStream.create(output)
+                        .setIsVerbose(false);
                     final InMemoryFileSystem fileSystem = InMemoryFileSystem.create(test.getClock());
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     final Covid19DataSource dataSource = null;
@@ -34,8 +36,9 @@ public interface QubCovid19ShowParametersTests
 
                 runner.test("with valid arguments", (Test test) ->
                 {
-                    final CharacterWriteStream output = InMemoryCharacterStream.create();
-                    final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
+                    final CharacterToByteWriteStream output = InMemoryCharacterToByteStream.create();
+                    final VerboseCharacterToByteWriteStream verbose = VerboseCharacterToByteWriteStream.create(output)
+                        .setIsVerbose(false);
                     final InMemoryFileSystem fileSystem = InMemoryFileSystem.create(test.getClock());
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
                     final Covid19DataSource dataSource = Covid19InMemoryDataSource.create();

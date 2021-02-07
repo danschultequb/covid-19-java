@@ -15,7 +15,7 @@ public interface QubCovid19Tests
                 });
             });
 
-            runner.testGroup("run(QubProcess)", () ->
+            runner.testGroup("run(DesktopProcess)", () ->
             {
                 runner.test("with null process", (Test test) ->
                 {
@@ -25,11 +25,8 @@ public interface QubCovid19Tests
 
                 runner.test("with " + Strings.escapeAndQuote("-?"), (Test test) ->
                 {
-                    try (QubProcess process = QubProcess.create("-?"))
+                    try (final FakeDesktopProcess process = FakeDesktopProcess.create("-?"))
                     {
-                        final InMemoryCharacterToByteStream output = InMemoryCharacterToByteStream.create();
-                        process.setOutputWriteStream(output);
-
                         QubCovid19.run(process);
 
                         test.assertEqual(
@@ -40,20 +37,18 @@ public interface QubCovid19Tests
                                 "  --help(?):   Show the help message for this application.",
                                 "",
                                 "Actions:",
-                                "  config:         Open the configuration file for this application.",
+                                "  configuration:  Open the configuration file for this application.",
                                 "  logs:           Show the logs folder.",
                                 "  show (default): Report the current state of the COVID-19 virus in the configured locations."),
-                            Strings.getLines(output.getText().await()));
+                            Strings.getLines(process.getOutputWriteStream().getText().await()));
+                        test.assertEqual(-1, process.getExitCode());
                     }
                 });
 
                 runner.test("with unrecognized action (\"spam\")", (Test test) ->
                 {
-                    try (QubProcess process = QubProcess.create("spam"))
+                    try (final FakeDesktopProcess process = FakeDesktopProcess.create("spam"))
                     {
-                        final InMemoryCharacterToByteStream output = InMemoryCharacterToByteStream.create();
-                        process.setOutputWriteStream(output);
-
                         QubCovid19.run(process);
 
                         test.assertEqual(
@@ -66,10 +61,11 @@ public interface QubCovid19Tests
                                 "  --help(?):   Show the help message for this application.",
                                 "",
                                 "Actions:",
-                                "  config:         Open the configuration file for this application.",
+                                "  configuration:  Open the configuration file for this application.",
                                 "  logs:           Show the logs folder.",
                                 "  show (default): Report the current state of the COVID-19 virus in the configured locations."),
-                            Strings.getLines(output.getText().await()));
+                            Strings.getLines(process.getOutputWriteStream().getText().await()));
+                        test.assertEqual(-1, process.getExitCode());
                     }
                 });
             });

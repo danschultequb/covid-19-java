@@ -4,18 +4,23 @@ import java.util.Objects;
 
 public interface QubCovid19Show
 {
-    String actionName = "show";
-    String actionDescription = "Report the current state of the COVID-19 virus in the configured locations.";
+    static void addAction(CommandLineActions actions)
+    {
+        PreCondition.assertNotNull(actions, "actions");
 
-    static QubCovid19ShowParameters getParameters(QubProcess process)
+        actions.addAction("show", QubCovid19Show::getParameters, QubCovid19Show::run)
+            .setDescription("Report the current state of the COVID-19 virus in the configured locations.")
+            .setDefaultAction();
+    }
+
+    static QubCovid19ShowParameters getParameters(DesktopProcess process, CommandLineAction action)
     {
         PreCondition.assertNotNull(process, "process");
+        PreCondition.assertNotNull(action, "action");
 
         QubCovid19ShowParameters result = null;
 
-        final CommandLineParameters parameters = process.createCommandLineParameters()
-            .setApplicationName(QubCovid19.getActionFullName(QubCovid19Show.actionName))
-            .setApplicationDescription(QubCovid19Show.actionDescription);
+        final CommandLineParameters parameters = action.createCommandLineParameters(process);
         final CommandLineParameterProfiler profilerParameter = parameters.addProfiler(process, QubCovid19.class);
         final CommandLineParameterHelp helpParameter = parameters.addHelp();
         final CommandLineParameterVerbose verboseParameter = parameters.addVerbose(process);
@@ -24,8 +29,8 @@ public interface QubCovid19Show
         {
             profilerParameter.await();
 
-            final CharacterWriteStream output = process.getOutputWriteStream();
-            final VerboseCharacterWriteStream verbose = verboseParameter.getVerboseCharacterWriteStream().await();
+            final CharacterToByteWriteStream output = process.getOutputWriteStream();
+            final VerboseCharacterToByteWriteStream verbose = verboseParameter.getVerboseCharacterToByteWriteStream().await();
 
             final Folder projectDataFolder = process.getQubProjectDataFolder().await();
             final Git git = Git.create(process);
@@ -41,9 +46,9 @@ public interface QubCovid19Show
         PreCondition.assertNotNull(parameters, "parameters");
 
         final Folder dataFolder = parameters.getDataFolder();
-        final LogCharacterWriteStreams logStreams = CommandLineLogsAction.addLogStream(dataFolder, parameters.getOutput(), parameters.getVerbose());
-        final IndentedCharacterWriteStream output = IndentedCharacterWriteStream.create(logStreams.getCombinedStream(0));
-        final CharacterWriteStream verbose = logStreams.getCombinedStream(1);
+        final LogStreams logStreams = CommandLineLogsAction.addLogStreamFromDataFolder(dataFolder, parameters.getOutput(), parameters.getVerbose());
+        final IndentedCharacterWriteStream output = IndentedCharacterWriteStream.create(logStreams.getOutput());
+        final CharacterWriteStream verbose = logStreams.getVerbose();
         final Covid19DataSource dataSource = parameters.getDataSource();
 
         try (final Disposable logStream = logStreams.getLogStream())

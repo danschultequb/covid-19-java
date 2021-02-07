@@ -6,19 +6,32 @@ public interface QubCovid19ShowTests
     {
         runner.testGroup(QubCovid19.class, () ->
         {
-            runner.testGroup("getParameters(QubProcess)", () ->
+            runner.testGroup("getParameters(DesktopProcess)", () ->
             {
                 runner.test("with null process", (Test test) ->
                 {
-                    test.assertThrows(() -> QubCovid19Show.getParameters(null),
+                    final DesktopProcess process = null;
+                    final CommandLineAction action = CommandLineAction.create("full-action-name", (DesktopProcess actionProcess) -> {});
+                    test.assertThrows(() -> QubCovid19Show.getParameters(process, action),
                         new PreConditionFailure("process cannot be null."));
+                });
+
+                runner.test("with null fullActionName", (Test test) ->
+                {
+                    try (final FakeDesktopProcess process = FakeDesktopProcess.create())
+                    {
+                        final CommandLineAction action = null;
+                        test.assertThrows(() -> QubCovid19Show.getParameters(process, action),
+                            new PreConditionFailure("action cannot be null."));
+                    }
                 });
 
                 runner.test("with no command line arguments", (Test test) ->
                 {
-                    try (final QubProcess process = QubProcess.create())
+                    try (final FakeDesktopProcess process = FakeDesktopProcess.create())
                     {
-                        final QubCovid19ShowParameters parameters = QubCovid19Show.getParameters(process);
+                        final CommandLineAction action = CommandLineAction.create("full-action-name", (DesktopProcess actionProcess) -> {});
+                        final QubCovid19ShowParameters parameters = QubCovid19Show.getParameters(process, action);
                         test.assertNotNull(parameters);
                         test.assertSame(process.getOutputWriteStream(), parameters.getOutput());
                         test.assertNotNull(parameters.getDataSource());
@@ -28,23 +41,22 @@ public interface QubCovid19ShowTests
 
                 runner.test("with \"--help\"", (Test test) ->
                 {
-                    try (final QubProcess process = QubProcess.create("--help"))
+                    try (final FakeDesktopProcess process = FakeDesktopProcess.create("--help"))
                     {
-                        final InMemoryCharacterToByteStream output = InMemoryCharacterToByteStream.create();
-                        process.setOutputWriteStream(output);
-
-                        final QubCovid19ShowParameters parameters = QubCovid19Show.getParameters(process);
+                        final CommandLineAction action = CommandLineAction.create("full-action-name", (DesktopProcess actionProcess) -> {})
+                            .setDescription("Report the current state of the COVID-19 virus in the configured locations.");
+                        final QubCovid19ShowParameters parameters = QubCovid19Show.getParameters(process, action);
                         test.assertNull(parameters);
 
                         test.assertEqual(
                             Iterable.create(
-                                "Usage: qub-covid-19 show [--profiler] [--help] [--verbose]",
+                                "Usage: full-action-name [--profiler] [--help] [--verbose]",
                                 "  Report the current state of the COVID-19 virus in the configured locations.",
                                 "  --profiler:   Whether or not this application should pause before it is run to allow a profiler to be attached.",
                                 "  --help(?):    Show the help message for this application.",
                                 "  --verbose(v): Whether or not to show verbose logs."
                             ),
-                            Strings.getLines(output.getText().await()));
+                            Strings.getLines(process.getOutputWriteStream().getText().await()));
                         test.assertEqual(-1, process.getExitCode());
                     }
                 });
@@ -61,7 +73,8 @@ public interface QubCovid19ShowTests
                 runner.test("with non-null parameters", (Test test) ->
                 {
                     final InMemoryCharacterToByteStream output = InMemoryCharacterToByteStream.create();
-                    final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
+                    final VerboseCharacterToByteWriteStream verbose = VerboseCharacterToByteWriteStream.create(output)
+                        .setIsVerbose(false);
                     final InMemoryFileSystem fileSystem = InMemoryFileSystem.create(test.getClock());
                     fileSystem.createRoot("/").await();
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
@@ -176,8 +189,9 @@ public interface QubCovid19ShowTests
 
                 runner.test("with actual data", runner.skip(), (Test test) ->
                 {
-                    final InMemoryCharacterStream output = InMemoryCharacterStream.create();
-                    final VerboseCharacterWriteStream verbose = new VerboseCharacterWriteStream(false, output);
+                    final InMemoryCharacterToByteStream output = InMemoryCharacterToByteStream.create();
+                    final VerboseCharacterToByteWriteStream verbose = VerboseCharacterToByteWriteStream.create(output)
+                        .setIsVerbose(false);
                     final InMemoryFileSystem fileSystem = InMemoryFileSystem.create(test.getClock());
                     fileSystem.createRoot("/").await();
                     final Folder dataFolder = fileSystem.getFolder("/data/").await();
@@ -186,7 +200,7 @@ public interface QubCovid19ShowTests
                             .addLocation(Covid19Location.create("Global"))
                             .addLocation(Covid19Location.create("USA", Covid19LocationCondition.countryOrRegionEquals("US")))
                             .toString()).await();
-                    final Git git = Git.create(test.getProcess());
+                    final Git git = Git.create((DesktopProcess)test.getProcess());
                     final Covid19GitDataSource dataSource = Covid19GitDataSource.create(test.getFileSystem().getFolder("C:/qub/qub/covid-19-java/data/").await(), git);
                     final QubCovid19ShowParameters parameters = new QubCovid19ShowParameters(output, verbose, dataFolder, dataSource);
 

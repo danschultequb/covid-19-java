@@ -2,46 +2,32 @@ package qub;
 
 public interface QubCovid19
 {
-    String applicationName = "qub-covid-19";
-    String applicationDescription = "Used to gather, consolidate, and report data about the COVID-19 virus.";
+    Path configurationFileRelativePath = Path.parse("configuration.json");
 
     static void main(String[] args)
     {
-        QubProcess.run(args, QubCovid19::run);
+        DesktopProcess.run(args, QubCovid19::run);
     }
 
-    static void run(QubProcess process)
+    static void run(DesktopProcess process)
     {
         PreCondition.assertNotNull(process, "process");
 
-        final CommandLineActions<QubProcess> actions = process.<QubProcess>createCommandLineActions()
-            .setApplicationName(QubCovid19.applicationName)
-            .setApplicationDescription(QubCovid19.applicationDescription);
+        final CommandLineActions actions = process.createCommandLineActions()
+            .setApplicationName("qub-covid-19")
+            .setApplicationDescription("Used to gather, consolidate, and report data about the COVID-19 virus.");
 
-        actions.addAction(QubCovid19Show.actionName, QubCovid19Show::getParameters, QubCovid19Show::run)
-            .setDescription(QubCovid19Show.actionDescription)
-            .setDefaultAction();
+        QubCovid19Show.addAction(actions);
 
-        actions.addAction(QubCovid19Config.actionName, QubCovid19Config::getParameters, QubCovid19Config::run)
-            .setDescription(QubCovid19Config.actionDescription);
+        CommandLineConfigurationAction.addAction(actions, CommandLineConfigurationActionParameters.create()
+            .setConfigurationSchemaFileRelativePath("configuration.schema.json")
+            .setConfigurationSchema(QubCovid19.getDefaultConfigurationSchema())
+            .setConfigurationFileRelativePath(QubCovid19.configurationFileRelativePath)
+            .setDefaultConfiguration(QubCovid19.getDefaultConfiguration().toJson()));
 
-        CommandLineLogsAction.add(actions);
+        CommandLineLogsAction.addAction(actions);
 
-        actions.run(process);
-    }
-
-    static File getConfigurationSchemaFile(Folder dataFolder)
-    {
-        PreCondition.assertNotNull(dataFolder, "dataFolder");
-
-        return dataFolder.getFile("configuration.schema.json").await();
-    }
-
-    static File getConfigurationFile(Folder dataFolder)
-    {
-        PreCondition.assertNotNull(dataFolder, "dataFolder");
-
-        return dataFolder.getFile("configuration.json").await();
+        actions.run();
     }
 
     static JSONSchema getDefaultConfigurationSchema()
@@ -105,6 +91,13 @@ public interface QubCovid19
             );
     }
 
+    static File getConfigurationFile(Folder dataFolder)
+    {
+        PreCondition.assertNotNull(dataFolder, "dataFolder");
+
+        return dataFolder.getFile(QubCovid19.configurationFileRelativePath).await();
+    }
+
     static Covid19Configuration getDefaultConfiguration()
     {
         return Covid19Configuration.create()
@@ -125,12 +118,5 @@ public interface QubCovid19
         PreCondition.assertNotNull(date, "date");
 
         return date.getMonth() + "/" + date.getDayOfMonth() + "/" + date.getYear();
-    }
-
-    static String getActionFullName(String actionName)
-    {
-        PreCondition.assertNotNullAndNotEmpty(actionName, "actionName");
-
-        return QubCovid19.applicationName + " " + actionName;
     }
 }
